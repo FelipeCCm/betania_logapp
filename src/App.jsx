@@ -77,7 +77,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Dumbbell size={32} color="#f9ab2d" />
             <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
-              GymProgress Pro
+              Betânia Log App
             </h1>
           </div>
           

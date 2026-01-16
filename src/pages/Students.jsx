@@ -62,7 +62,7 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
           Gerenciar Alunos
         </h2>
         <button
@@ -71,7 +71,7 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.75rem 1.5rem',
+            padding: '0.5rem 1rem',
             backgroundColor: '#f9ab2d',
             color: '#1a1b1c',
             border: 'none',

@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { History as HistoryIcon, Calendar } from 'lucide-react';
 
 const HistoryPage = ({ students, exercises, progressRecords }) => {
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedExercise, setSelectedExercise] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredRecords = progressRecords.filter(record => {
     if (selectedStudent && record.student_id !== selectedStudent) return false;
@@ -16,20 +23,30 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
 
   return (
     <div>
-      <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f9ab2d', marginBottom: '2rem' }}>
+      <h2 style={{
+        fontSize: isMobile ? '1.5rem' : '2rem',
+        fontWeight: 'bold',
+        color: '#f9ab2d',
+        marginBottom: '1.5rem'
+      }}>
         Histórico de Progressão
       </h2>
 
+      {/* Filtros */}
       <div style={{
         backgroundColor: '#2a2b2c',
-        padding: '1.5rem',
+        padding: '1.25rem',
         borderRadius: '12px',
         marginBottom: '2rem',
         border: '1px solid #3a3b3c'
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: '1rem'
+        }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>
+            <label style={{ color: '#f9ab2d', fontWeight: 'bold' }}>
               Filtrar por Aluno
             </label>
             <select
@@ -37,15 +54,15 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
               onChange={(e) => setSelectedStudent(e.target.value)}
               style={{
                 width: '100%',
+                marginTop: '0.5rem',
                 padding: '0.75rem',
                 backgroundColor: '#1a1b1c',
                 border: '1px solid #3a3b3c',
                 borderRadius: '6px',
-                color: '#ffffff',
-                fontSize: '1rem'
+                color: '#fff'
               }}
             >
-              <option value="">Todos os alunos</option>
+              <option value="">Todos</option>
               {students.map(student => (
                 <option key={student.id} value={student.id}>{student.name}</option>
               ))}
@@ -53,7 +70,7 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>
+            <label style={{ color: '#f9ab2d', fontWeight: 'bold' }}>
               Filtrar por Exercício
             </label>
             <select
@@ -61,15 +78,15 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
               onChange={(e) => setSelectedExercise(e.target.value)}
               style={{
                 width: '100%',
+                marginTop: '0.5rem',
                 padding: '0.75rem',
                 backgroundColor: '#1a1b1c',
                 border: '1px solid #3a3b3c',
                 borderRadius: '6px',
-                color: '#ffffff',
-                fontSize: '1rem'
+                color: '#fff'
               }}
             >
-              <option value="">Todos os exercícios</option>
+              <option value="">Todos</option>
               {exercises.map(exercise => (
                 <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
               ))}
@@ -78,17 +95,18 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
         </div>
       </div>
 
+      {/* Conteúdo */}
       {filteredRecords.length === 0 ? (
         <div style={{
           textAlign: 'center',
-          padding: '3rem',
+          padding: '2.5rem',
           backgroundColor: '#2a2b2c',
           borderRadius: '12px',
           border: '2px dashed #3a3b3c'
         }}>
-          <HistoryIcon size={48} color="#f9ab2d" style={{ margin: '0 auto 1rem' }} />
-          <p style={{ color: '#999', fontSize: '1.1rem' }}>
-            Nenhum registro encontrado. Comece registrando progressos!
+          <HistoryIcon size={48} color="#f9ab2d" />
+          <p style={{ color: '#999', marginTop: '1rem' }}>
+            Nenhum registro encontrado
           </p>
         </div>
       ) : (
@@ -98,59 +116,50 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
               key={record.id}
               style={{
                 backgroundColor: '#2a2b2c',
-                padding: '1.5rem',
+                padding: '1.25rem',
                 borderRadius: '12px',
                 border: '1px solid #3a3b3c',
-                display: 'grid',
-                gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 3fr',
-                gap: '1rem',
-                alignItems: 'center'
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
               }}
             >
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>ALUNO</div>
-                <div style={{ fontWeight: 'bold', color: '#f9ab2d' }}>
-                  {getStudentName(record.student_id)}
+              <strong style={{ color: '#f9ab2d' }}>
+                {getStudentName(record.student_id)}
+              </strong>
+
+              <span>{getExerciseName(record.exercise_id)}</span>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.9rem'
+              }}>
+                <span><strong>Carga:</strong> {record.weight} kg</span>
+                <span><strong>Reps:</strong> {record.reps}x</span>
+                <span><strong>Séries:</strong> {record.sets}</span>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.85rem',
+                color: '#ccc'
+              }}>
+                <Calendar size={14} color="#f9ab2d" />
+                {new Date(record.recorded_at).toLocaleDateString('pt-BR')}
+              </div>
+
+              {record.notes && (
+                <div style={{
+                  fontSize: '0.85rem',
+                  color: '#bbb',
+                  fontStyle: 'italic'
+                }}>
+                  {record.notes}
                 </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>EXERCÍCIO</div>
-                <div style={{ fontWeight: 'bold' }}>{getExerciseName(record.exercise_id)}</div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
-                <div style={{ fontWeight: 'bold', color: '#f9ab2d' }}>{record.weight} kg</div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
-                <div style={{ fontWeight: 'bold' }}>{record.reps}x</div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>SÉRIES</div>
-                <div style={{ fontWeight: 'bold' }}>{record.sets}</div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>DATA</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Calendar size={16} color="#f9ab2d" />
-                  {new Date(record.recorded_at).toLocaleDateString('pt-BR')}
-                </div>
-                {record.notes && (
-                  <div style={{ 
-                    marginTop: '0.5rem', 
-                    fontSize: '0.875rem', 
-                    color: '#bbb',
-                    fontStyle: 'italic' 
-                  }}>
-                    {record.notes}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           ))}
         </div>

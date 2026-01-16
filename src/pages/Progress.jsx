@@ -109,54 +109,93 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>
-                Carga (kg) *
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                required
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#1a1b1c',
-                  border: '1px solid #3a3b3c',
-                  borderRadius: '6px',
-                  color: '#ffffff',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '1rem',
+              marginBottom: '1.5rem',
+              alignItems: 'stretch'
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '24px',
+                    marginBottom: '0.5rem',
+                    color: '#f9ab2d',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Carga (kg)*
+                </label>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>
-                Repetições *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.reps}
-                onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#1a1b1c',
-                  border: '1px solid #3a3b3c',
-                  borderRadius: '6px',
-                  color: '#ffffff',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>
-                Séries *
+                <input
+                  type="number"
+                  step="0.5"
+                  required
+                  value={formData.weight}
+                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#1a1b1c',
+                    border: '1px solid #3a3b3c',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '24px',
+                    marginBottom: '0.5rem',
+                    color: '#f9ab2d',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Repetições*
+                </label>
+
+                <input
+                  type="number"
+                  required
+                  value={formData.reps}
+                  onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#1a1b1c',
+                    border: '1px solid #3a3b3c',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: '24px',
+                  marginBottom: '0.5rem',
+                  color: '#f9ab2d',
+                  fontWeight: 'bold'
+                }}
+              >
+                Séries*
               </label>
+
               <input
                 type="number"
                 required

@@ -142,19 +142,27 @@ const StudentProfile = ({ student, onBack, exercises }) => {
           Voltar
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '50%',
-            backgroundColor: '#f9ab2d',
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2.5rem',
-            fontWeight: 'bold',
-            color: '#1a1b1c'
-          }}>
+            gap: '1.5rem',
+            marginBottom: '1rem',
+            flexWrap: 'wrap'
+          }}
+        >
+                      <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: '#f9ab2d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: '#1a1b1c'
+            }}>
             {student.name.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -168,7 +176,17 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       </div>
 
       {/* Botão Adicionar Exercício */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+     <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem',
+        flexWrap: 'wrap',
+        gap: '1rem'
+      }}
+    >
+
         <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
           Exercícios e Progresso Atual
         </h2>
@@ -210,11 +228,11 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         }}>
           <div style={{
             backgroundColor: '#2a2b2c',
-            padding: '2rem',
+            padding: '1rem',
             borderRadius: '12px',
             width: '100%',
             maxWidth: '800px',
-            maxHeight: '80vh',
+            maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             border: '2px solid #f9ab2d'
@@ -268,7 +286,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               flex: 1, 
               overflowY: 'auto',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
               gap: '1rem'
             }}>
               {filteredExercises.length === 0 ? (
@@ -451,7 +469,7 @@ const ExerciseRow = ({
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 1fr 1fr', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '1rem', 
           marginBottom: '1rem' 
         }}>
@@ -610,18 +628,20 @@ const ExerciseRow = ({
   }
 
   return (
-    <div style={{
-      backgroundColor: '#2a2b2c',
-      padding: '1.5rem',
-      borderRadius: '12px',
-      border: '1px solid #3a3b3c',
-      display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr 2fr auto',
-      gap: '1.5rem',
-      alignItems: 'center'
-    }}>
+          <div
+        style={{
+          backgroundColor: '#2a2b2c',
+          padding: '1.25rem',
+          borderRadius: '12px',
+          border: '1px solid #3a3b3c',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}
+      >
+
       <div>
-        <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
+        <h3 style={{ flex: '1 1 100%' }}>
           {exerciseName}
         </h3>
         <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
@@ -669,7 +689,7 @@ const ExerciseRow = ({
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 100%' }}>
         <button
           onClick={onShowHistory}
           style={{
@@ -749,11 +769,11 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
     }}>
       <div style={{
         backgroundColor: '#2a2b2c',
-        padding: '2rem',
+        padding: '1rem',
         borderRadius: '12px',
         width: '100%',
         maxWidth: '900px',
-        maxHeight: '80vh',
+        maxHeight: '90vh',
         overflow: 'auto',
         border: '2px solid #f9ab2d'
       }}>
@@ -784,7 +804,7 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
                 borderRadius: '6px',
                 border: index === 0 ? '2px solid #f9ab2d' : '1px solid #3a3b3c',
                 display: 'grid',
-                gridTemplateColumns: 'auto 1fr 1fr 1fr 2fr',
+                gridTemplateColumns: 'auto 1fr 1fr 1fr',
                 gap: '1rem',
                 alignItems: 'center'
               }}

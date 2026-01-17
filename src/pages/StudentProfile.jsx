@@ -266,7 +266,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               />
               <input
                 type="text"
-                placeholder="Buscar exercício por nome ou grupo muscular..."
+                placeholder="Buscar exercícios"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{

@@ -93,32 +93,33 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
       </div>
 
       {/* Barra de Busca */}
-      <div style={{ marginBottom: '2rem', position: 'relative' }}>
-        <Search 
-          size={20} 
-          color="#999" 
-          style={{ 
-            position: 'absolute', 
-            left: '1rem', 
-            top: '50%', 
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none'
-          }} 
-        />
+            <div style={{ marginBottom: '2rem', position: 'relative' }}>
+        <div style={{
+          position: 'absolute', 
+          left: '1rem', 
+          top: '50%', 
+          transform: 'translateY(-50%)',
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <Search size={20} color="#999" />
+        </div>
         <input
           type="text"
-          placeholder="Buscar aluno por nome, email ou telefone..."
+          placeholder="Buscar por alunos"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             width: '100%',
-            padding: '0.75rem 0.75rem 0.75rem 3rem',
+            padding: '0.75rem 3rem 0.75rem 3rem',
             backgroundColor: '#2a2b2c',
             border: '2px solid #3a3b3c',
             borderRadius: '8px',
             color: '#ffffff',
             fontSize: '1rem',
-            transition: 'border-color 0.3s'
+            transition: 'border-color 0.3s',
+            outline: 'none'
           }}
           onFocus={(e) => {
             e.target.style.borderColor = '#f9ab2d';
@@ -140,12 +141,22 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
               color: '#999',
               cursor: 'pointer',
               fontSize: '1.5rem',
-              padding: '0',
+              padding: '0.25rem',
               width: '24px',
               height: '24px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#3a3b3c';
+              e.target.style.color = '#f9ab2d';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#999';
             }}
             title="Limpar busca"
           >

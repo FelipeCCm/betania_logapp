@@ -1,7 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, TrendingUp, History, Dumbbell } from 'lucide-react';
 
 const Navigation = ({ currentPage, onPageChange }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    // Adicionar listener de resize
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup: remover listener quando o componente for desmontado
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   const pages = [
     { id: 'students', label: 'Alunos', icon: User },
     { id: 'progress', label: 'Registrar Progresso', icon: TrendingUp },
@@ -32,9 +48,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
           }}
         >
           <Icon size={18} />
-          <span style={{ display: window.innerWidth < 640 ? 'none' : 'inline' }}>
-            {label}
-          </span>
+          {!isMobile && <span>{label}</span>}
         </button>
       ))}
     </nav>

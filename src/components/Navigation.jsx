@@ -1,11 +1,12 @@
 import React from 'react';
-import { User, TrendingUp, History } from 'lucide-react';
+import { User, TrendingUp, History, Dumbbell } from 'lucide-react';
 
 const Navigation = ({ currentPage, onPageChange }) => {
   const pages = [
     { id: 'students', label: 'Alunos', icon: User },
     { id: 'progress', label: 'Registrar Progresso', icon: TrendingUp },
-    { id: 'history', label: 'Histórico', icon: History }
+    { id: 'history', label: 'Histórico', icon: History },
+    { id: 'exercises', label: 'Exercícios', icon: Dumbbell }
   ];
 
   return (
@@ -25,11 +26,15 @@ const Navigation = ({ currentPage, onPageChange }) => {
             borderRadius: '8px',
             cursor: 'pointer',
             fontWeight: currentPage === id ? 'bold' : 'normal',
-            transition: 'all 0.3s'
+            transition: 'all 0.3s',
+            fontSize: '0.875rem',
+            whiteSpace: 'nowrap'
           }}
         >
           <Icon size={18} />
-          {label}
+          <span style={{ display: window.innerWidth < 640 ? 'none' : 'inline' }}>
+            {label}
+          </span>
         </button>
       ))}
     </nav>

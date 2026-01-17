@@ -4,6 +4,7 @@ import Navigation from './components/Navigation';
 import StudentsPage from './pages/Students';
 import ProgressPage from './pages/Progress';
 import HistoryPage from './pages/History';
+import ExercisesPage from './pages/Exercises';
 import { Dumbbell } from 'lucide-react';
 
 function App() {
@@ -18,7 +19,6 @@ function App() {
   }, []);
 
   const loadData = async () => {
-    console.log('Carregando dados...');
     setLoading(true);
     
     const { data: studentsData } = await supabase
@@ -35,12 +35,6 @@ function App() {
       .from('progress_records')
       .select('*')
       .order('recorded_at', { ascending: false });
-    
-    console.log('Dados carregados:', {
-      students: studentsData?.length || 0,
-      exercises: exercisesData?.length || 0,
-      progress: progressData?.length || 0
-    });
     
     setStudents(studentsData || []);
     setExercises(exercisesData || []);
@@ -77,7 +71,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Dumbbell size={32} color="#f9ab2d" />
             <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
-              Betânia Log App
+              GymProgress Pro
             </h1>
           </div>
           
@@ -85,7 +79,7 @@ function App() {
         </div>
       </header>
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1rem' }}>
         {currentPage === 'students' && (
           <StudentsPage 
             students={students} 
@@ -108,6 +102,10 @@ function App() {
             exercises={exercises}
             progressRecords={progressRecords}
           />
+        )}
+
+        {currentPage === 'exercises' && (
+          <ExercisesPage />
         )}
       </main>
     </div>

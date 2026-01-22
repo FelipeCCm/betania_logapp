@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ExerciseSetsModal from '../components/ExerciseSetsModal';
 
 const StudentProfile = ({ student, onBack, exercises }) => {
   const [studentExercises, setStudentExercises] = useState([]);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [showHistory, setShowHistory] = useState(null);
+  const [showSetsModal, setShowSetsModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    loadStudentExercises();
+    loadStudentData();
   }, [student.id]);
 
-  const loadStudentExercises = async () => {
+  const loadStudentData = async () => {
     const { data: progressData } = await supabase
       .from('progress_records')
       .select('*')
@@ -33,14 +35,12 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   };
 
   const handleAddExercise = async (exerciseId) => {
-    // Verificar se já existe
     const exists = studentExercises.some(ex => ex.exercise_id === exerciseId);
     if (exists) {
       alert('Este aluno já tem este exercício cadastrado!');
       return;
     }
 
-    // Criar um registro inicial
     const { data, error } = await supabase
       .from('progress_records')
       .insert([{
@@ -51,13 +51,13 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         sets: 0,
         notes: ''
       }])
+
       .select();
 
     if (!error && data) {
       setStudentExercises([...studentExercises, data[0]]);
       setShowAddExercise(false);
       setSearchTerm('');
-      // Iniciar edição imediatamente
       setEditingExercise(data[0].id);
     } else {
       alert('Erro ao adicionar exercício: ' + error.message);
@@ -77,7 +77,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       .eq('id', exerciseRecord.id);
 
     if (!error) {
-      loadStudentExercises();
+      loadStudentData();
       setEditingExercise(null);
       alert('Exercício atualizado com sucesso!');
     } else {
@@ -97,7 +97,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       .eq('id', exerciseRecord.id);
 
     if (!error) {
-      loadStudentExercises();
+      loadStudentData();
       alert('Exercício removido!');
     } else {
       alert('Erro ao remover: ' + error.message);
@@ -107,12 +107,10 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || 'Desconhecido';
   const getMuscleGroup = (id) => exercises.find(e => e.id === id)?.muscle_group || '';
 
-  // Filtrar exercícios disponíveis (que ainda não foram adicionados)
   const availableExercises = exercises.filter(exercise => 
     !studentExercises.some(se => se.exercise_id === exercise.id)
   );
 
-  // Filtrar por busca
   const filteredExercises = availableExercises.filter(exercise =>
     exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     exercise.muscle_group.toLowerCase().includes(searchTerm.toLowerCase())
@@ -142,27 +140,19 @@ const StudentProfile = ({ student, onBack, exercises }) => {
           Voltar
         </button>
 
-        <div
-          style={{
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            backgroundColor: '#f9ab2d',
             display: 'flex',
             alignItems: 'center',
-            gap: '1.5rem',
-            marginBottom: '1rem',
-            flexWrap: 'wrap'
-          }}
-        >
-                      <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              backgroundColor: '#f9ab2d',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: '#1a1b1c'
-            }}>
+            justifyContent: 'center',
+            fontSize: '2.5rem',
+            fontWeight: 'bold',
+            color: '#1a1b1c'
+          }}>
             {student.name.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -176,17 +166,14 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       </div>
 
       {/* Botão Adicionar Exercício */}
-     <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
         marginBottom: '2rem',
         flexWrap: 'wrap',
         gap: '1rem'
-      }}
-    >
-
+      }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
           Exercícios e Progresso Atual
         </h2>
@@ -211,7 +198,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         </button>
       </div>
 
-      {/* Modal Adicionar Exercício - VERSÃO MELHORADA */}
+      {/* Modal Adicionar Exercício */}
       {showAddExercise && (
         <div style={{
           position: 'fixed',
@@ -228,11 +215,11 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         }}>
           <div style={{
             backgroundColor: '#2a2b2c',
-            padding: '1rem',
+            padding: '2rem',
             borderRadius: '12px',
             width: '100%',
             maxWidth: '800px',
-            maxHeight: '90vh',
+            maxHeight: '80vh',
             display: 'flex',
             flexDirection: 'column',
             border: '2px solid #f9ab2d'
@@ -252,7 +239,6 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               </button>
             </div>
 
-            {/* Barra de Busca */}
             <div style={{ marginBottom: '1.5rem', position: 'relative' }}>
               <Search 
                 size={20} 
@@ -266,7 +252,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               />
               <input
                 type="text"
-                placeholder="Buscar exercícios"
+                placeholder="Buscar exercício por nome ou grupo muscular..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -281,12 +267,11 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               />
             </div>
 
-            {/* Lista de Exercícios Disponíveis */}
             <div style={{ 
               flex: 1, 
               overflowY: 'auto',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
               gap: '1rem'
             }}>
               {filteredExercises.length === 0 ? (
@@ -387,6 +372,20 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         />
       )}
 
+      {/* Modal de Séries */}
+      {showSetsModal && (
+        <ExerciseSetsModal
+          progressRecord={showSetsModal}
+          exerciseName={getExerciseName(showSetsModal.exercise_id)}
+          studentName={student.name}
+          onClose={() => setShowSetsModal(null)}
+          onSave={() => {
+            setShowSetsModal(null);
+            loadStudentData();
+          }}
+        />
+      )}
+
       {/* Lista de Exercícios do Aluno */}
       {studentExercises.length === 0 ? (
         <div style={{
@@ -415,6 +414,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
               onSave={(data) => handleUpdateExercise(exerciseRecord, data)}
               onDelete={() => handleDeleteExercise(exerciseRecord)}
               onShowHistory={() => setShowHistory(exerciseRecord.exercise_id)}
+              onShowSets={() => setShowSetsModal(exerciseRecord)}
             />
           ))}
         </div>
@@ -423,7 +423,25 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   );
 };
 
-// Componente de Linha de Exercício (mantém o mesmo)
+// Componente de Linha de Exercício
+// Componente de Linha de Exercício (substituir o ExerciseRow completo)
+// Adicione este hook no início do arquivo, ANTES do componente StudentProfile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente de Linha de Exercício
 const ExerciseRow = ({ 
   exerciseRecord, 
   exerciseName, 
@@ -433,14 +451,16 @@ const ExerciseRow = ({
   onCancelEdit, 
   onSave, 
   onDelete,
-  onShowHistory 
+  onShowHistory,
+  onShowSets
 }) => {
+  const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
-    weight: exerciseRecord.weight,
-    reps: exerciseRecord.reps,
-    sets: exerciseRecord.sets,
-    notes: exerciseRecord.notes || ''
-  });
+  weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
+  reps: exerciseRecord.reps === 0 ? '' : exerciseRecord.reps,
+  sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
+  notes: exerciseRecord.notes || ''
+});
 
   const handleSave = () => {
     if (!formData.weight || !formData.reps || !formData.sets) {
@@ -469,7 +489,7 @@ const ExerciseRow = ({
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
           gap: '1rem', 
           marginBottom: '1rem' 
         }}>
@@ -511,7 +531,7 @@ const ExerciseRow = ({
               Repetições *
             </label>
             <input
-              type="number"
+              type="text"
               value={formData.reps}
               onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
               style={{
@@ -581,11 +601,11 @@ const ExerciseRow = ({
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             onClick={onCancelEdit}
             style={{
-              flex: 1,
+              flex: '1 1 150px',
               padding: '0.75rem',
               backgroundColor: 'transparent',
               color: '#999',
@@ -596,7 +616,8 @@ const ExerciseRow = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              fontSize: '0.875rem'
             }}
           >
             <X size={18} />
@@ -605,7 +626,7 @@ const ExerciseRow = ({
           <button
             onClick={handleSave}
             style={{
-              flex: 1,
+              flex: '1 1 150px',
               padding: '0.75rem',
               backgroundColor: '#f9ab2d',
               color: '#1a1b1c',
@@ -616,7 +637,8 @@ const ExerciseRow = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              fontSize: '0.875rem'
             }}
           >
             <Save size={18} />
@@ -628,113 +650,169 @@ const ExerciseRow = ({
   }
 
   return (
-          <div
-        style={{
-          backgroundColor: '#2a2b2c',
-          padding: '1.25rem',
-          borderRadius: '12px',
-          border: '1px solid #3a3b3c',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}
-      >
-
-      <div>
-        <h3 style={{ flex: '1 1 100%' }}>
-          {exerciseName}
-        </h3>
-        <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
-          {muscleGroup}
-        </p>
-      </div>
-
-      <div>
-        <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
-        <div style={{ fontWeight: 'bold', color: '#f9ab2d', fontSize: '1.25rem' }}>
-          {exerciseRecord.weight} kg
-        </div>
-      </div>
-
-      <div>
-        <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
-        <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-          {exerciseRecord.reps}x
-        </div>
-      </div>
-
-      <div>
-        <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>SÉRIES</div>
-        <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-          {exerciseRecord.sets}
-        </div>
-      </div>
-
-      <div>
-        {exerciseRecord.notes && (
-          <p style={{ 
-            margin: 0, 
-            fontSize: '0.875rem', 
-            color: '#bbb',
-            fontStyle: 'italic',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-            {exerciseRecord.notes}
+    <div style={{
+      backgroundColor: '#2a2b2c',
+      padding: '1.5rem',
+      borderRadius: '12px',
+      border: '1px solid #3a3b3c'
+    }}>
+      {/* Informações do Exercício */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        marginBottom: '1rem'
+      }}>
+        {/* Nome e Grupo Muscular */}
+        <div>
+          <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
+            {exerciseName}
+          </h3>
+          <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
+            {muscleGroup}
           </p>
-        )}
-        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#666' }}>
-          Atualizado: {new Date(exerciseRecord.recorded_at).toLocaleDateString('pt-BR')}
-        </p>
+        </div>
+
+        {/* Dados Principais */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '1rem'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
+            <div style={{ fontWeight: 'bold', color: '#f9ab2d', fontSize: '1.25rem' }}>
+              {exerciseRecord.weight} kg
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
+              {exerciseRecord.reps}x
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>SÉRIES</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
+              {exerciseRecord.sets}
+            </div>
+          </div>
+        </div>
+
+        {/* Observações e Data */}
+        <div>
+          {exerciseRecord.notes && (
+            <p style={{ 
+              margin: '0 0 0.5rem 0', 
+              fontSize: '0.875rem', 
+              color: '#bbb',
+              fontStyle: 'italic'
+            }}>
+              {exerciseRecord.notes}
+            </p>
+          )}
+          <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>
+            Atualizado: {new Date(exerciseRecord.recorded_at).toLocaleDateString('pt-BR')}
+          </p>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 100%' }}>
+      {/* Botões de Ação */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: '0.5rem',
+        borderTop: '1px solid #3a3b3c',
+        paddingTop: '1rem'
+      }}>
+        <button
+          onClick={onShowSets}
+          style={{
+            padding: '0.75rem',
+            backgroundColor: 'transparent',
+            border: '1px solid #4a9eff',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: '#4a9eff',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
+          }}
+        >
+          <List size={18} />
+          {isMobile && 'Séries'}
+        </button>
         <button
           onClick={onShowHistory}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             backgroundColor: 'transparent',
             border: '1px solid #f9ab2d',
             borderRadius: '6px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: '#f9ab2d',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
           }}
-          title="Ver histórico"
         >
-          <History size={18} color="#f9ab2d" />
+          <History size={18} />
+          {isMobile && 'Histórico'}
         </button>
         <button
           onClick={onEdit}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             backgroundColor: 'transparent',
             border: '1px solid #f9ab2d',
             borderRadius: '6px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: '#f9ab2d',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
           }}
-          title="Editar"
         >
-          <Edit2 size={18} color="#f9ab2d" />
+          <Edit2 size={18} />
+          {isMobile && 'Editar'}
         </button>
         <button
           onClick={onDelete}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             backgroundColor: 'transparent',
             border: '1px solid #ff4444',
             borderRadius: '6px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: '#ff4444',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
           }}
-          title="Excluir"
         >
-          <Trash2 size={18} color="#ff4444" />
+          <Trash2 size={18} />
+          {isMobile && 'Excluir'}
         </button>
       </div>
     </div>
   );
 };
 
-// Modal de Histórico (mantém o mesmo do código anterior)
+// Modal de Histórico
 const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
   const [history, setHistory] = useState([]);
 
@@ -769,11 +847,11 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
     }}>
       <div style={{
         backgroundColor: '#2a2b2c',
-        padding: '1rem',
+        padding: '2rem',
         borderRadius: '12px',
         width: '100%',
         maxWidth: '900px',
-        maxHeight: '90vh',
+        maxHeight: '80vh',
         overflow: 'auto',
         border: '2px solid #f9ab2d'
       }}>
@@ -804,7 +882,7 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
                 borderRadius: '6px',
                 border: index === 0 ? '2px solid #f9ab2d' : '1px solid #3a3b3c',
                 display: 'grid',
-                gridTemplateColumns: 'auto 1fr 1fr 1fr',
+                gridTemplateColumns: 'auto 1fr 1fr 1fr 2fr',
                 gap: '1rem',
                 alignItems: 'center'
               }}

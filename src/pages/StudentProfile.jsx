@@ -424,8 +424,6 @@ const StudentProfile = ({ student, onBack, exercises }) => {
 };
 
 // Componente de Linha de Exercício
-// Componente de Linha de Exercício (substituir o ExerciseRow completo)
-// Adicione este hook no início do arquivo, ANTES do componente StudentProfile
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -456,11 +454,11 @@ const ExerciseRow = ({
 }) => {
   const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
-  weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
-  reps: exerciseRecord.reps === 0 ? '' : exerciseRecord.reps,
-  sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
-  notes: exerciseRecord.notes || ''
-});
+    weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
+    reps: (!exerciseRecord.reps || exerciseRecord.reps === '0' || exerciseRecord.reps === 0) ? '' : exerciseRecord.reps,
+    sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
+    notes: exerciseRecord.notes || ''
+  });
 
   const handleSave = () => {
     if (!formData.weight || !formData.reps || !formData.sets) {
@@ -508,6 +506,7 @@ const ExerciseRow = ({
               step="0.5"
               value={formData.weight}
               onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+              placeholder="Ex: 20"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -534,6 +533,7 @@ const ExerciseRow = ({
               type="text"
               value={formData.reps}
               onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
+              placeholder="Ex: 12"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -560,6 +560,7 @@ const ExerciseRow = ({
               type="number"
               value={formData.sets}
               onChange={(e) => setFormData({ ...formData, sets: e.target.value })}
+              placeholder="Ex: 3"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -656,14 +657,12 @@ const ExerciseRow = ({
       borderRadius: '12px',
       border: '1px solid #3a3b3c'
     }}>
-      {/* Informações do Exercício */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         gap: '1rem',
         marginBottom: '1rem'
       }}>
-        {/* Nome e Grupo Muscular */}
         <div>
           <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
             {exerciseName}
@@ -673,7 +672,6 @@ const ExerciseRow = ({
           </p>
         </div>
 
-        {/* Dados Principais */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -682,26 +680,34 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
             <div style={{ fontWeight: 'bold', color: '#f9ab2d', fontSize: '1.25rem' }}>
-              {exerciseRecord.weight} kg
+              {exerciseRecord.weight && exerciseRecord.weight !== 0 
+                ? `${exerciseRecord.weight} kg` 
+                : '-'
+              }
             </div>
           </div>
 
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
             <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-              {exerciseRecord.reps}x
+              {exerciseRecord.reps && exerciseRecord.reps !== '0' && exerciseRecord.reps !== 0 
+                ? exerciseRecord.reps 
+                : '-'
+              }
             </div>
           </div>
 
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>SÉRIES</div>
             <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-              {exerciseRecord.sets}
+              {exerciseRecord.sets && exerciseRecord.sets !== 0 
+                ? exerciseRecord.sets 
+                : '-'
+              }
             </div>
           </div>
         </div>
 
-        {/* Observações e Data */}
         <div>
           {exerciseRecord.notes && (
             <p style={{ 
@@ -719,7 +725,6 @@ const ExerciseRow = ({
         </div>
       </div>
 
-      {/* Botões de Ação */}
       <div style={{ 
         display: 'grid',
         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',

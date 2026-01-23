@@ -116,6 +116,8 @@ const ExerciseSetsModal = ({
     onClose();
   };
 
+  const isMobile = window.innerWidth <= 640;
+
   return (
     <div style={{
       position: 'fixed',
@@ -223,7 +225,9 @@ const ExerciseSetsModal = ({
 
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.2fr 1fr 1fr',
+                    gridTemplateColumns: isMobile
+                      ? '1fr'
+                      : '1.2fr 1fr 1fr',
                     gap: '0.75rem'
                   }}>
                     <select

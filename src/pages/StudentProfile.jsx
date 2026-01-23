@@ -65,25 +65,25 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   };
 
   const handleUpdateExercise = async (exerciseRecord, updatedData) => {
-    const { error } = await supabase
-      .from('progress_records')
-      .update({
-        weight: parseFloat(updatedData.weight) || 0,
-        reps: parseInt(updatedData.reps) || 0,
-        sets: parseInt(updatedData.sets) || 0,
-        notes: updatedData.notes || '',
-        recorded_at: new Date().toISOString()
-      })
-      .eq('id', exerciseRecord.id);
+  const { error } = await supabase
+    .from('progress_records')
+    .update({
+      weight: parseFloat(updatedData.weight) || 0,
+      reps: updatedData.reps || '', // ← MUDOU AQUI: não converte para número
+      sets: parseInt(updatedData.sets) || 0,
+      notes: updatedData.notes || '',
+      recorded_at: new Date().toISOString()
+    })
+    .eq('id', exerciseRecord.id);
 
-    if (!error) {
-      loadStudentData();
-      setEditingExercise(null);
-      alert('Exercício atualizado com sucesso!');
-    } else {
-      alert('Erro ao atualizar: ' + error.message);
-    }
-  };
+  if (!error) {
+    loadStudentData();
+    setEditingExercise(null);
+    alert('Exercício atualizado com sucesso!');
+  } else {
+    alert('Erro ao atualizar: ' + error.message);
+  }
+};
 
   const handleDeleteExercise = async (exerciseRecord) => {
     const exercise = exercises.find(e => e.id === exerciseRecord.exercise_id);
@@ -454,12 +454,11 @@ const ExerciseRow = ({
 }) => {
   const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
-    weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
-    reps: (!exerciseRecord.reps || exerciseRecord.reps === '0' || exerciseRecord.reps === 0) ? '' : exerciseRecord.reps,
-    sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
-    notes: exerciseRecord.notes || ''
-  });
-
+  weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
+  reps: (!exerciseRecord.reps || exerciseRecord.reps === '0' || exerciseRecord.reps === 0) ? '' : exerciseRecord.reps,
+  sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
+  notes: exerciseRecord.notes || ''
+});
   const handleSave = () => {
     if (!formData.weight || !formData.reps || !formData.sets) {
       alert('Preencha carga, repetições e séries!');

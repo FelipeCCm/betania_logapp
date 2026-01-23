@@ -181,21 +181,6 @@ const ExerciseSetsModal = ({
           </button>
         </div>
 
-        {/* INFO */}
-        <div style={{
-          display: 'flex',
-          gap: '0.75rem',
-          backgroundColor: COLORS.bgDark,
-          borderRadius: '10px',
-          padding: '0.75rem',
-          marginBottom: '1.5rem',
-          fontSize: '0.85rem',
-          color: COLORS.muted
-        }}>
-          <AlertCircle size={18} color={COLORS.primary} />
-          Arraste as séries para reordenar e organize seu treino com clareza.
-        </div>
-
         {/* LISTA */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {loading ? (

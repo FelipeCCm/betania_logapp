@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
-import { TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Folder } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const ProgressPage = ({ students, exercises, onUpdate }) => {
   const [formData, setFormData] = useState({
     student_id: '',
     exercise_id: '',
+    category_id: '',
     weight: '',
     reps: '',
     sets: '',
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  // Carregar categorias quando o aluno for selecionado
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!formData.student_id) {
+        setCategories([]);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('exercise_categories')
+        .select('*')
+        .eq('student_id', formData.student_id)
+        .order('created_at', { ascending: true });
+
+      setCategories(data || []);
+    };
+
+    loadCategories();
+  }, [formData.student_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,10 +42,13 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
     const { error } = await supabase
       .from('progress_records')
       .insert([{
-        ...formData,
+        student_id: formData.student_id,
+        exercise_id: formData.exercise_id,
+        category_id: formData.category_id || null,
         weight: parseFloat(formData.weight),
         reps: parseInt(formData.reps),
-        sets: parseInt(formData.sets)
+        sets: parseInt(formData.sets),
+        notes: formData.notes || ''
       }]);
 
     setLoading(false);
@@ -32,11 +57,13 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
       setFormData({
         student_id: '',
         exercise_id: '',
+        category_id: '',
         weight: '',
         reps: '',
         sets: '',
         notes: ''
       });
+      setCategories([]);
       onUpdate();
       alert('Progresso registrado com sucesso!');
     } else {
@@ -64,7 +91,7 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
             <select
               required
               value={formData.student_id}
-              onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, student_id: e.target.value, category_id: '' })}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -81,6 +108,48 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
               ))}
             </select>
           </div>
+
+          {formData.student_id && categories.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+                color: '#f9ab2d',
+                fontWeight: 'bold'
+              }}>
+                <Folder size={18} />
+                Categoria (Opcional)
+              </label>
+              <select
+                value={formData.category_id}
+                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#1a1b1c',
+                  border: '1px solid #3a3b3c',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="">Sem categoria</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+              <p style={{
+                margin: '0.5rem 0 0 0',
+                fontSize: '0.75rem',
+                color: '#999',
+                fontStyle: 'italic'
+              }}>
+                Se nenhuma categoria for selecionada, o exercício aparecerá em "Exercícios sem categoria"
+              </p>
+            </div>
+          )}
 
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f9ab2d', fontWeight: 'bold' }}>

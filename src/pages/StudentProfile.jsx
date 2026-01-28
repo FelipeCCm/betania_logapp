@@ -47,7 +47,30 @@ const StudentProfile = ({ student, onBack, exercises }) => {
         }
       });
 
-      setStudentExercises(Array.from(exerciseMap.values()));
+      const exercises = Array.from(exerciseMap.values());
+      const recordIds = exercises.map(ex => ex.id);
+
+      // Buscar todas as séries de uma vez (otimizado)
+      const { data: allSets } = await supabase
+        .from('exercise_sets')
+        .select('progress_record_id')
+        .in('progress_record_id', recordIds);
+
+      // Contar séries por progress_record_id
+      const setsCountMap = {};
+      if (allSets) {
+        allSets.forEach(set => {
+          setsCountMap[set.progress_record_id] = (setsCountMap[set.progress_record_id] || 0) + 1;
+        });
+      }
+
+      // Atribuir contagem real a cada exercício
+      exercises.forEach(exercise => {
+        const detailedCount = setsCountMap[exercise.id];
+        exercise.actual_sets_count = detailedCount || exercise.sets || 0;
+      });
+
+      setStudentExercises(exercises);
     }
   };
 
@@ -931,8 +954,8 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>SÉRIES</div>
             <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-              {exerciseRecord.sets && exerciseRecord.sets !== 0 
-                ? exerciseRecord.sets 
+              {exerciseRecord.actual_sets_count && exerciseRecord.actual_sets_count !== 0
+                ? exerciseRecord.actual_sets_count
                 : '-'
               }
             </div>

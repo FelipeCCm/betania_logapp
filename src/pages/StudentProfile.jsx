@@ -40,10 +40,13 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       .order('recorded_at', { ascending: false });
 
     if (progressData) {
+      // Usar Map com chave composta: exercise_id + category_id
+      // Isso permite o mesmo exercício em categorias diferentes
       const exerciseMap = new Map();
       progressData.forEach(record => {
-        if (!exerciseMap.has(record.exercise_id)) {
-          exerciseMap.set(record.exercise_id, record);
+        const key = `${record.exercise_id}_${record.category_id || 'null'}`;
+        if (!exerciseMap.has(key)) {
+          exerciseMap.set(key, record);
         }
       });
 
@@ -154,9 +157,17 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   };
 
   const handleAddExercise = async (exerciseId) => {
-    const exists = studentExercises.some(ex => ex.exercise_id === exerciseId);
+    // Verificar se o exercício já existe NESTA categoria específica
+    const exists = studentExercises.some(ex =>
+      ex.exercise_id === exerciseId &&
+      ex.category_id === selectedCategory
+    );
+
     if (exists) {
-      alert('Este aluno já tem este exercício cadastrado!');
+      const categoryName = selectedCategory
+        ? categories.find(c => c.id === selectedCategory)?.name
+        : 'Exercícios sem categoria';
+      alert(`Este exercício já está cadastrado em "${categoryName}"!`);
       return;
     }
 
@@ -174,7 +185,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       .select();
 
     if (!error && data) {
-      setStudentExercises([...studentExercises, data[0]]);
+      await loadStudentData();
       setShowAddExercise(false);
       setSearchTerm('');
       setEditingExercise(data[0].id);
@@ -226,8 +237,13 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || 'Desconhecido';
   const getMuscleGroup = (id) => exercises.find(e => e.id === id)?.muscle_group || '';
 
-  const availableExercises = exercises.filter(exercise => 
-    !studentExercises.some(se => se.exercise_id === exercise.id)
+  // Filtrar exercícios que NÃO estão na categoria atual
+  // Permite adicionar o mesmo exercício em categorias diferentes
+  const availableExercises = exercises.filter(exercise =>
+    !studentExercises.some(se =>
+      se.exercise_id === exercise.id &&
+      se.category_id === selectedCategory
+    )
   );
 
   const filteredExercises = availableExercises.filter(exercise =>
@@ -1096,10 +1112,21 @@ const ExerciseRow = ({
 // Modal de Histórico
 const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
   const [history, setHistory] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     loadHistory();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    const { data } = await supabase
+      .from('exercise_categories')
+      .select('*')
+      .eq('student_id', student.id);
+
+    setCategories(data || []);
+  };
 
   const loadHistory = async () => {
     const { data } = await supabase
@@ -1110,6 +1137,11 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
       .order('recorded_at', { ascending: false });
 
     setHistory(data || []);
+  };
+
+  const getCategoryName = (categoryId) => {
+    if (!categoryId) return 'Sem categoria';
+    return categories.find(c => c.id === categoryId)?.name || 'Categoria desconhecida';
   };
 
   return (
@@ -1161,44 +1193,66 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
                 backgroundColor: '#1a1b1c',
                 padding: '1rem',
                 borderRadius: '6px',
-                border: index === 0 ? '2px solid #f9ab2d' : '1px solid #3a3b3c',
+                border: index === 0 ? '2px solid #f9ab2d' : '1px solid #3a3b3c'
+              }}
+            >
+              <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'auto 1fr 1fr 1fr 2fr',
                 gap: '1rem',
                 alignItems: 'center'
-              }}
-            >
-              <div style={{
-                backgroundColor: index === 0 ? '#f9ab2d' : '#3a3b3c',
-                color: index === 0 ? '#1a1b1c' : '#999',
-                padding: '0.25rem 0.5rem',
-                borderRadius: '4px',
-                fontSize: '0.75rem',
-                fontWeight: 'bold'
               }}>
-                {index === 0 ? 'ATUAL' : `#${history.length - index}`}
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999' }}>CARGA</div>
-                <div style={{ fontWeight: 'bold', color: '#f9ab2d' }}>{record.weight} kg</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999' }}>REPS</div>
-                <div style={{ fontWeight: 'bold' }}>{record.reps}x</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#999' }}>SÉRIES</div>
-                <div style={{ fontWeight: 'bold' }}>{record.sets}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                  📅 {new Date(record.recorded_at).toLocaleDateString('pt-BR')} às {new Date(record.recorded_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                <div style={{
+                  backgroundColor: index === 0 ? '#f9ab2d' : '#3a3b3c',
+                  color: index === 0 ? '#1a1b1c' : '#999',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold'
+                }}>
+                  {index === 0 ? 'ATUAL' : `#${history.length - index}`}
                 </div>
-                {record.notes && (
-                  <div style={{ fontSize: '0.75rem', color: '#bbb', fontStyle: 'italic' }}>
-                    "{record.notes}"
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#999' }}>CARGA</div>
+                  <div style={{ fontWeight: 'bold', color: '#f9ab2d' }}>{record.weight} kg</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#999' }}>REPS</div>
+                  <div style={{ fontWeight: 'bold' }}>{record.reps}x</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#999' }}>SÉRIES</div>
+                  <div style={{ fontWeight: 'bold' }}>{record.sets}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                    📅 {new Date(record.recorded_at).toLocaleDateString('pt-BR')} às {new Date(record.recorded_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                )}
+                  {record.notes && (
+                    <div style={{ fontSize: '0.75rem', color: '#bbb', fontStyle: 'italic' }}>
+                      "{record.notes}"
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mostrar categoria */}
+              <div style={{
+                marginTop: '0.75rem',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid #3a3b3c',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <Folder size={14} color="#9b59b6" />
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: '#9b59b6',
+                  fontWeight: 'bold'
+                }}>
+                  {getCategoryName(record.category_id)}
+                </span>
               </div>
             </div>
           ))}

@@ -4,8 +4,10 @@ import StudentList from '../components/StudentList';
 import StudentForm from '../components/StudentForm';
 import StudentProfile from './StudentProfile';
 import { supabase } from '../lib/supabase';
+import { useCustomModal } from '../components/CustomModal';
 
 const StudentsPage = ({ students, onUpdate, exercises }) => {
+  const { showAlert, ModalComponents } = useCustomModal();
   const [showForm, setShowForm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,9 +20,9 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
 
     if (!error) {
       onUpdate();
-      alert('Aluno excluído com sucesso!');
+      await showAlert('Aluno excluído com sucesso!', 'success');
     } else {
-      alert('Erro ao excluir aluno: ' + error.message);
+      await showAlert('Erro ao excluir aluno: ' + error.message, 'error');
     }
   };
 
@@ -188,17 +190,20 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
         />
       )}
 
-      <div style={{ 
-        display: 'grid', 
+      <div style={{
+        display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
         gap: '1.5rem'
       }}>
-        <StudentList 
-          students={filteredStudents} 
+        <StudentList
+          students={filteredStudents}
           onDelete={handleDelete}
           onSelectStudent={handleSelectStudent}
         />
       </div>
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </div>
   );
 };

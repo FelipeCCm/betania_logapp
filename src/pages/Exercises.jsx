@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Dumbbell } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCustomModal } from '../components/CustomModal';
 
 const ExercisesPage = () => {
+  const { showAlert, showConfirm, ModalComponents } = useCustomModal();
   const [exercises, setExercises] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
@@ -33,9 +35,9 @@ const ExercisesPage = () => {
     if (!error) {
       loadExercises();
       setShowAddForm(false);
-      alert('Exercício adicionado com sucesso!');
+      await showAlert('Exercício adicionado com sucesso!', 'success');
     } else {
-      alert('Erro ao adicionar exercício: ' + error.message);
+      await showAlert('Erro ao adicionar exercício: ' + error.message, 'error');
     }
   };
 
@@ -51,14 +53,24 @@ const ExercisesPage = () => {
     if (!error) {
       loadExercises();
       setEditingExercise(null);
-      alert('Exercício atualizado com sucesso!');
+      await showAlert('Exercício atualizado com sucesso!', 'success');
     } else {
-      alert('Erro ao atualizar exercício: ' + error.message);
+      await showAlert('Erro ao atualizar exercício: ' + error.message, 'error');
     }
   };
 
   const handleDeleteExercise = async (exercise) => {
-    if (!window.confirm(`Tem certeza que deseja excluir "${exercise.name}"? Esta ação não pode ser desfeita.`)) {
+    const confirmed = await showConfirm(
+      `Tem certeza que deseja excluir "${exercise.name}"? Esta ação não pode ser desfeita.`,
+      {
+        title: 'Excluir Exercício',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        isDanger: true
+      }
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -72,9 +84,9 @@ const ExercisesPage = () => {
 
     if (!error) {
       loadExercises();
-      alert('Exercício excluído com sucesso!');
+      await showAlert('Exercício excluído com sucesso!', 'success');
     } else {
-      alert('Erro ao excluir exercício: ' + error.message);
+      await showAlert('Erro ao excluir exercício: ' + error.message, 'error');
     }
   };
 
@@ -129,6 +141,7 @@ const ExercisesPage = () => {
           onClose={() => setShowAddForm(false)}
           onSave={handleAddExercise}
           loading={loading}
+          showAlert={showAlert}
         />
       )}
 
@@ -175,6 +188,7 @@ const ExercisesPage = () => {
                     onSave={(data) => handleUpdateExercise(exercise.id, data)}
                     onDelete={() => handleDeleteExercise(exercise)}
                     loading={loading}
+                    showAlert={showAlert}
                   />
                 ))}
               </div>
@@ -182,20 +196,23 @@ const ExercisesPage = () => {
           ))}
         </div>
       )}
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </div>
   );
 };
 
 // Modal de Formulário para Adicionar
-const ExerciseFormModal = ({ onClose, onSave, loading }) => {
+const ExerciseFormModal = ({ onClose, onSave, loading, showAlert }) => {
   const [formData, setFormData] = useState({
     name: '',
     muscle_group: ''
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.muscle_group.trim()) {
-      alert('Preencha o nome e o grupo muscular!');
+      await showAlert('Preencha o nome e o grupo muscular!', 'warning');
       return;
     }
     onSave(formData);
@@ -322,23 +339,24 @@ const ExerciseFormModal = ({ onClose, onSave, loading }) => {
 };
 
 // Card de Exercício
-const ExerciseCard = ({ 
-  exercise, 
-  isEditing, 
-  onEdit, 
-  onCancelEdit, 
-  onSave, 
+const ExerciseCard = ({
+  exercise,
+  isEditing,
+  onEdit,
+  onCancelEdit,
+  onSave,
   onDelete,
-  loading 
+  loading,
+  showAlert
 }) => {
   const [formData, setFormData] = useState({
     name: exercise.name,
     muscle_group: exercise.muscle_group
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim() || !formData.muscle_group.trim()) {
-      alert('Preencha o nome e o grupo muscular!');
+      await showAlert('Preencha o nome e o grupo muscular!', 'warning');
       return;
     }
     onSave(formData);

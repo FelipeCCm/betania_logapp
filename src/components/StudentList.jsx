@@ -1,11 +1,24 @@
 import React from 'react';
 import { User, Trash2 } from 'lucide-react';
+import { useCustomModal } from './CustomModal';
 
 const StudentList = ({ students, onDelete, onSelectStudent }) => {
+  const { showConfirm, ModalComponents } = useCustomModal();
+
   const handleDelete = async (e, student) => {
     e.stopPropagation(); // Previne que o click abra o perfil
-    
-    if (window.confirm(`Tem certeza que deseja excluir ${student.name}? Todos os registros de progresso deste aluno também serão removidos.`)) {
+
+    const confirmed = await showConfirm(
+      `Tem certeza que deseja excluir ${student.name}? Todos os registros de progresso deste aluno também serão removidos.`,
+      {
+        title: 'Excluir Aluno',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        isDanger: true
+      }
+    );
+
+    if (confirmed) {
       onDelete(student.id);
     }
   };
@@ -131,6 +144,9 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
           </div>
         </div>
       ))}
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </>
   );
 };

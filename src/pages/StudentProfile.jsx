@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, Folder, FolderOpen, ArrowRight, Move } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ExerciseSetsModal from '../components/ExerciseSetsModal';
+import { useCustomModal } from '../components/CustomModal';
 
 const StudentProfile = ({ student, onBack, exercises }) => {
+  const { showAlert, showConfirm, ModalComponents } = useCustomModal();
   const [studentExercises, setStudentExercises] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -79,7 +81,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
 
   const handleCreateCategory = async (categoryName) => {
     if (!categoryName.trim()) {
-      alert('Digite um nome para a categoria!');
+      await showAlert('Digite um nome para a categoria!', 'warning');
       return;
     }
 
@@ -94,15 +96,15 @@ const StudentProfile = ({ student, onBack, exercises }) => {
     if (!error && data) {
       await loadCategories();
       setShowCategoryModal(false);
-      alert('Categoria criada com sucesso!');
+      await showAlert('Categoria criada com sucesso!', 'success');
     } else {
-      alert('Erro ao criar categoria: ' + error.message);
+      await showAlert('Erro ao criar categoria: ' + error.message, 'error');
     }
   };
 
   const handleUpdateCategory = async (categoryId, newName) => {
     if (!newName.trim()) {
-      alert('Digite um nome para a categoria!');
+      await showAlert('Digite um nome para a categoria!', 'warning');
       return;
     }
 
@@ -114,14 +116,24 @@ const StudentProfile = ({ student, onBack, exercises }) => {
     if (!error) {
       await loadCategories();
       setEditingCategory(null);
-      alert('Categoria atualizada!');
+      await showAlert('Categoria atualizada!', 'success');
     } else {
-      alert('Erro ao atualizar categoria: ' + error.message);
+      await showAlert('Erro ao atualizar categoria: ' + error.message, 'error');
     }
   };
 
   const handleDeleteCategory = async (categoryId, categoryName) => {
-    if (!window.confirm(`Tem certeza que deseja excluir a categoria "${categoryName}"? Os exercícios não serão deletados, apenas ficarão sem categoria.`)) {
+    const confirmed = await showConfirm(
+      `Tem certeza que deseja excluir a categoria "${categoryName}"? Os exercícios não serão deletados, apenas ficarão sem categoria.`,
+      {
+        title: 'Excluir Categoria',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        isDanger: true
+      }
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -135,9 +147,9 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       await loadStudentData();
       setSelectedCategory(null);
       setIsViewingExercises(false);
-      alert('Categoria excluída!');
+      await showAlert('Categoria excluída!', 'success');
     } else {
-      alert('Erro ao excluir categoria: ' + error.message);
+      await showAlert('Erro ao excluir categoria: ' + error.message, 'error');
     }
   };
 
@@ -150,9 +162,9 @@ const StudentProfile = ({ student, onBack, exercises }) => {
     if (!error) {
       await loadStudentData();
       setShowMoveModal(null);
-      alert('Exercício movido com sucesso!');
+      await showAlert('Exercício movido com sucesso!', 'success');
     } else {
-      alert('Erro ao mover exercício: ' + error.message);
+      await showAlert('Erro ao mover exercício: ' + error.message, 'error');
     }
   };
 
@@ -167,7 +179,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       const categoryName = selectedCategory
         ? categories.find(c => c.id === selectedCategory)?.name
         : 'Exercícios sem categoria';
-      alert(`Este exercício já está cadastrado em "${categoryName}"!`);
+      await showAlert(`Este exercício já está cadastrado em "${categoryName}"!`, 'warning');
       return;
     }
 
@@ -190,7 +202,7 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       setSearchTerm('');
       setEditingExercise(data[0].id);
     } else {
-      alert('Erro ao adicionar exercício: ' + error.message);
+      await showAlert('Erro ao adicionar exercício: ' + error.message, 'error');
     }
   };
 
@@ -209,15 +221,25 @@ const StudentProfile = ({ student, onBack, exercises }) => {
   if (!error) {
     loadStudentData();
     setEditingExercise(null);
-    alert('Exercício atualizado com sucesso!');
+    await showAlert('Exercício atualizado com sucesso!', 'success');
   } else {
-    alert('Erro ao atualizar: ' + error.message);
+    await showAlert('Erro ao atualizar: ' + error.message, 'error');
   }
 };
 
   const handleDeleteExercise = async (exerciseRecord) => {
     const exercise = exercises.find(e => e.id === exerciseRecord.exercise_id);
-    if (!window.confirm(`Tem certeza que deseja remover ${exercise?.name}? Todos os registros históricos deste exercício serão mantidos.`)) {
+    const confirmed = await showConfirm(
+      `Tem certeza que deseja remover ${exercise?.name}? Todos os registros históricos deste exercício serão mantidos.`,
+      {
+        title: 'Remover Exercício',
+        confirmText: 'Remover',
+        cancelText: 'Cancelar',
+        isDanger: true
+      }
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -228,9 +250,9 @@ const StudentProfile = ({ student, onBack, exercises }) => {
 
     if (!error) {
       loadStudentData();
-      alert('Exercício removido!');
+      await showAlert('Exercício removido!', 'success');
     } else {
-      alert('Erro ao remover: ' + error.message);
+      await showAlert('Erro ao remover: ' + error.message, 'error');
     }
   };
 
@@ -682,12 +704,16 @@ const StudentProfile = ({ student, onBack, exercises }) => {
                   onShowSets={() => setShowSetsModal(exerciseRecord)}
                   onMove={() => setShowMoveModal(exerciseRecord)}
                   categories={categories}
+                  showAlert={showAlert}
                 />
               ))}
             </div>
           )}
         </>
       )}
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </div>
   );
 };
@@ -721,7 +747,8 @@ const ExerciseRow = ({
   onShowHistory,
   onShowSets,
   onMove,
-  categories
+  categories,
+  showAlert
 }) => {
   const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
@@ -730,9 +757,9 @@ const ExerciseRow = ({
   sets: exerciseRecord.sets === 0 ? '' : exerciseRecord.sets,
   notes: exerciseRecord.notes || ''
 });
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.weight || !formData.reps || !formData.sets) {
-      alert('Preencha carga, repetições e séries!');
+      await showAlert('Preencha carga, repetições e séries!', 'warning');
       return;
     }
     onSave(formData);

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCustomModal } from './CustomModal';
 
 const StudentForm = ({ onClose, onSuccess }) => {
+  const { showAlert, ModalComponents } = useCustomModal();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +22,7 @@ const StudentForm = ({ onClose, onSuccess }) => {
       onSuccess();
       onClose();
     } else {
-      alert('Erro ao adicionar aluno: ' + error.message);
+      await showAlert('Erro ao adicionar aluno: ' + error.message, 'error');
     }
   };
 
@@ -133,6 +135,9 @@ const StudentForm = ({ onClose, onSuccess }) => {
           </button>
         </form>
       </div>
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </div>
   );
 };

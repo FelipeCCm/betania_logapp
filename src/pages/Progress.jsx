@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Folder } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCustomModal } from '../components/CustomModal';
 
 const ProgressPage = ({ students, exercises, onUpdate }) => {
+  const { showAlert, ModalComponents } = useCustomModal();
   const [formData, setFormData] = useState({
     student_id: '',
     exercise_id: '',
@@ -65,9 +67,9 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
       });
       setCategories([]);
       onUpdate();
-      alert('Progresso registrado com sucesso!');
+      await showAlert('Progresso registrado com sucesso!', 'success');
     } else {
-      alert('Erro ao registrar progresso: ' + error.message);
+      await showAlert('Erro ao registrar progresso: ' + error.message, 'error');
     }
   };
 
@@ -329,6 +331,9 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
           </button>
         </form>
       </div>
+
+      {/* Modals personalizados */}
+      {ModalComponents}
     </div>
   );
 };

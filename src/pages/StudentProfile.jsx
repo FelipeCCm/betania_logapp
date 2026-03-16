@@ -58,21 +58,39 @@ const StudentProfile = ({ student, onBack, exercises }) => {
       // Buscar todas as séries de uma vez (otimizado)
       const { data: allSets } = await supabase
         .from('exercise_sets')
-        .select('progress_record_id')
+        .select('progress_record_id, set_type, weight, reps, set_number')
         .in('progress_record_id', recordIds);
 
-      // Contar séries por progress_record_id
+      // Contar séries e identificar última série válida por exercício
       const setsCountMap = {};
+      const lastValidSetMap = {};
+
       if (allSets) {
         allSets.forEach(set => {
           setsCountMap[set.progress_record_id] = (setsCountMap[set.progress_record_id] || 0) + 1;
+
+          if (['valid_1', 'valid_2', 'valid_3'].includes(set.set_type)) {
+            const current = lastValidSetMap[set.progress_record_id];
+            if (!current || set.set_number > current.set_number) {
+              lastValidSetMap[set.progress_record_id] = set;
+            }
+          }
         });
       }
 
-      // Atribuir contagem real a cada exercício
+      // Atribuir contagem real e valores de exibição a cada exercício
       exercises.forEach(exercise => {
         const detailedCount = setsCountMap[exercise.id];
         exercise.actual_sets_count = detailedCount || exercise.sets || 0;
+
+        const needsWeight = !exercise.weight || exercise.weight === 0;
+        const needsReps = !exercise.reps || exercise.reps === '0' || exercise.reps === 0;
+
+        if ((needsWeight || needsReps) && lastValidSetMap[exercise.id]) {
+          const lastValid = lastValidSetMap[exercise.id];
+          if (needsWeight && lastValid.weight) exercise.display_weight = lastValid.weight;
+          if (needsReps && lastValid.reps) exercise.display_reps = lastValid.reps;
+        }
       });
 
       setStudentExercises(exercises);
@@ -977,9 +995,11 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
             <div style={{ fontWeight: 'bold', color: '#f9ab2d', fontSize: '1.25rem' }}>
-              {exerciseRecord.weight && exerciseRecord.weight !== 0 
-                ? `${exerciseRecord.weight} kg` 
-                : '-'
+              {exerciseRecord.weight && exerciseRecord.weight !== 0
+                ? `${exerciseRecord.weight} kg`
+                : exerciseRecord.display_weight
+                  ? `${exerciseRecord.display_weight} kg`
+                  : '-'
               }
             </div>
           </div>
@@ -987,9 +1007,11 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
             <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-              {exerciseRecord.reps && exerciseRecord.reps !== '0' && exerciseRecord.reps !== 0 
-                ? exerciseRecord.reps 
-                : '-'
+              {exerciseRecord.reps && exerciseRecord.reps !== '0' && exerciseRecord.reps !== 0
+                ? exerciseRecord.reps
+                : exerciseRecord.display_reps
+                  ? exerciseRecord.display_reps
+                  : '-'
               }
             </div>
           </div>

@@ -1,0 +1,136 @@
+.floating-timer {
+  position: fixed;
+  z-index: 1000;
+  background: #0f1011;
+  color: #ffffff;
+  border: 1px solid #3a3b3c;
+  border-radius: 14px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  padding: 0.75rem 0.9rem;
+  min-width: 120px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.floating-timer:active {
+  cursor: grabbing;
+}
+
+.floating-timer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: #f9ab2d;
+  letter-spacing: 0.04em;
+  position: relative;
+}
+
+.floating-timer__time {
+  font-size: 1rem;
+}
+
+.floating-timer__badge {
+  background: rgba(249, 171, 45, 0.15);
+  color: #f9ab2d;
+  border: 1px solid rgba(249, 171, 45, 0.4);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.floating-timer:not(.floating-timer--expanded) .floating-timer__header {
+  justify-content: center;
+}
+
+.floating-timer:not(.floating-timer--expanded) .floating-timer__badge {
+  display: none;
+}
+
+.floating-timer--expanded {
+  min-width: 220px;
+}
+
+.floating-timer__panel {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.floating-timer__inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.floating-timer__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #cfcfcf;
+}
+
+.floating-timer__label input {
+  background: #1a1b1c;
+  border: 1px solid #3a3b3c;
+  color: #ffffff;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.floating-timer__label input:focus {
+  outline: 2px solid rgba(249, 171, 45, 0.65);
+  border-color: #f9ab2d;
+}
+
+.floating-timer__controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.floating-timer__button {
+  background: #f9ab2d;
+  color: #1a1b1c;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.floating-timer__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.floating-timer__button--ghost {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #3a3b3c;
+}
+
+@media (max-width: 640px) {
+  .floating-timer {
+    padding: 0.6rem 0.75rem;
+    border-radius: 12px;
+  }
+
+  .floating-timer--expanded {
+    min-width: 200px;
+  }
+
+  .floating-timer__controls {
+    flex-direction: column;
+  }
+}

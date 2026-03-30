@@ -966,12 +966,25 @@ const ExerciseRow = ({
   }
 
   return (
-    <div style={{
-      backgroundColor: '#2a2b2c',
-      padding: '1.5rem',
-      borderRadius: '12px',
-      border: '1px solid #3a3b3c'
-    }}>
+    <div
+      onClick={onShowSets}
+      style={{
+        backgroundColor: '#2a2b2c',
+        padding: '1.5rem',
+        borderRadius: '12px',
+        border: '1px solid #3a3b3c',
+        cursor: 'pointer',
+        transition: 'all 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#f9ab2d';
+        e.currentTarget.style.boxShadow = '0 6px 14px rgba(249, 171, 45, 0.15)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#3a3b3c';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -1046,33 +1059,16 @@ const ExerciseRow = ({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : (categories && categories.length > 0 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)'),
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
         gap: '0.5rem',
         borderTop: '1px solid #3a3b3c',
         paddingTop: '1rem'
       }}>
         <button
-          onClick={onShowSets}
-          style={{
-            padding: '0.75rem',
-            backgroundColor: 'transparent',
-            border: '1px solid #4a9eff',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            color: '#4a9eff',
-            fontWeight: 'bold',
-            fontSize: '0.875rem'
+          onClick={(e) => {
+            e.stopPropagation();
+            onShowHistory();
           }}
-        >
-          <List size={18} />
-          {!isMobile && 'Séries'}
-        </button>
-        <button
-          onClick={onShowHistory}
           style={{
             padding: '0.75rem',
             backgroundColor: 'transparent',
@@ -1091,30 +1087,34 @@ const ExerciseRow = ({
           <History size={18} />
           {!isMobile && 'Histórico'}
         </button>
-        {categories && categories.length > 0 && (
-          <button
-            onClick={onMove}
-            style={{
-              padding: '0.75rem',
-              backgroundColor: 'transparent',
-              border: '1px solid #9b59b6',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              color: '#9b59b6',
-              fontWeight: 'bold',
-              fontSize: '0.875rem'
-            }}
-          >
-            <Move size={18} />
-            {!isMobile && 'Mover'}
-          </button>
-        )}
         <button
-          onClick={onEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove();
+          }}
+          style={{
+            padding: '0.75rem',
+            backgroundColor: 'transparent',
+            border: '1px solid #9b59b6',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: '#9b59b6',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
+          }}
+        >
+          <Move size={18} />
+          {!isMobile && 'Mover'}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
           style={{
             padding: '0.75rem',
             backgroundColor: 'transparent',
@@ -1134,7 +1134,10 @@ const ExerciseRow = ({
           {!isMobile && 'Editar'}
         </button>
         <button
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           style={{
             padding: '0.75rem',
             backgroundColor: 'transparent',
@@ -1815,3 +1818,7 @@ const MoveExerciseModal = ({ exercise, exerciseName, categories, currentCategory
 };
 
 export default StudentProfile;
+
+
+
+

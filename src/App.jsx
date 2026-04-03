@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import Navigation from './components/Navigation';
+import FloatingTimer from './components/FloatingTimer';
 import StudentsPage from './pages/Students';
 import ProgressPage from './pages/Progress';
 import HistoryPage from './pages/History';
@@ -108,6 +109,7 @@ function App() {
           <ExercisesPage />
         )}
       </main>
+      <FloatingTimer />
     </div>
   );
 }

@@ -6,10 +6,20 @@ import StudentProfile from './StudentProfile';
 import { supabase } from '../lib/supabase';
 import { useCustomModal } from '../components/CustomModal';
 
-const StudentsPage = ({ students, onUpdate, exercises }) => {
+const StudentsPage = ({ students, onUpdate, exercises, profile }) => {
   const { showAlert, ModalComponents } = useCustomModal();
+  const isStudent = profile?.role === 'student';
+
+  // Para alunos: filtra somente o próprio card e abre direto o perfil
+  const visibleStudents = isStudent
+    ? students.filter(s => s.id === profile?.student_id)
+    : students;
+
   const [showForm, setShowForm] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  // Para alunos, inicializa já com o próprio card selecionado
+  const [selectedStudent, setSelectedStudent] = useState(
+    isStudent && visibleStudents.length > 0 ? visibleStudents[0] : null
+  );
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleDelete = async (studentId) => {
@@ -30,8 +40,8 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
     setSelectedStudent(student);
   };
 
-  // Filtrar alunos por nome, email ou telefone
-  const filteredStudents = students.filter(student =>
+  // Filtrar por busca (só para admin)
+  const filteredStudents = visibleStudents.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (student.phone && student.phone.includes(searchTerm))
@@ -46,20 +56,21 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
         </div>
       );
     }
-    
+
     return (
       <StudentProfile
         student={selectedStudent}
         exercises={exercises}
-        onBack={() => {
+        onBack={isStudent ? undefined : () => {
           setSelectedStudent(null);
           onUpdate();
         }}
+        hideBack={isStudent}
       />
     );
   }
 
-  // Caso contrário, mostra a lista de alunos
+  // Caso contrário, mostra a lista de alunos (apenas para admin)
   return (
     <div>
       <div style={{ 
@@ -73,8 +84,9 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
         <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
           Gerenciar Alunos
         </h2>
-        <button
-          onClick={() => setShowForm(true)}
+        {!isStudent && (
+          <button
+            onClick={() => setShowForm(true)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -91,7 +103,8 @@ const StudentsPage = ({ students, onUpdate, exercises }) => {
         >
           <Plus size={20} />
           Novo Aluno
-        </button>
+          </button>
+        )}
       </div>
 
       {/* Barra de Busca */}

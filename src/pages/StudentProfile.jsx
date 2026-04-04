@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, Folder, FolderOpen, ArrowRight, Move } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ExerciseSetsModal from '../components/ExerciseSetsModal';
 import { useCustomModal } from '../components/CustomModal';
 
-const StudentProfile = ({ student, onBack, exercises }) => {
+const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
   const { showAlert, showConfirm, ModalComponents } = useCustomModal();
   const [studentExercises, setStudentExercises] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -301,28 +302,31 @@ const StudentProfile = ({ student, onBack, exercises }) => {
     <div>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <button
-          onClick={isViewingExercises ? () => {
-            setIsViewingExercises(false);
-            setSelectedCategory(null);
-          } : onBack}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: 'transparent',
-            color: '#f9ab2d',
-            border: '1px solid #f9ab2d',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            marginBottom: '1rem',
-            fontSize: '1rem'
-          }}
-        >
-          <ArrowLeft size={20} />
-          {isViewingExercises ? 'Voltar para categorias' : 'Voltar'}
-        </button>
+        {(isViewingExercises || !hideBack) && (
+          <button
+            onClick={isViewingExercises ? () => {
+              setIsViewingExercises(false);
+              setSelectedCategory(null);
+            } : onBack}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: 'transparent',
+              color: '#f9ab2d',
+              border: '1px solid #f9ab2d',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              marginBottom: '1rem',
+              fontSize: '1rem',
+              fontFamily: 'inherit',
+            }}
+          >
+            <ArrowLeft size={20} />
+            {isViewingExercises ? 'Voltar para categorias' : 'Voltar'}
+          </button>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <div style={{

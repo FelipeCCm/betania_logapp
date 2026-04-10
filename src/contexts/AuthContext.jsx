@@ -92,7 +92,8 @@ export const AuthProvider = ({ children }) => {
           event === 'SIGNED_IN' ||
           event === 'TOKEN_REFRESHED' ||
           event === 'USER_UPDATED' ||
-          event === 'INITIAL_SESSION'
+          event === 'INITIAL_SESSION' ||
+          event === 'PASSWORD_RECOVERY'
         ) {
           if (session?.user) {
             clearTimeout(safetyTimer);

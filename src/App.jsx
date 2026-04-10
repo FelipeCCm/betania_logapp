@@ -148,10 +148,8 @@ function App() {
   // 1. Auth ainda resolvendo
   if (authLoading) return <LoadingScreen />;
 
-  const isRecoveryLink = window.location.hash && window.location.hash.includes('type=recovery');
-
-  // 2. Não autenticado, sem perfil ou recuperando senha → Login
-  if (!user || !profile || isRecoveryLink) return <LoginPage />;
+  // 2. Não autenticado ou sem perfil → Login
+  if (!user || !profile) return <LoginPage />;
 
   // 3. Dados ainda carregando após login
   if (dataLoading || !dataReady) return <LoadingScreen />;

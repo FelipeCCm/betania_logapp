@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Dumbbell, Mail, Lock, Eye, EyeOff, KeyRound, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
-  const { signIn, resetPassword, updatePassword } = useAuth();
-  const [mode, setMode] = useState('login'); // 'login' | 'forgot' | 'update_password'
+  const { signIn } = useAuth();
   const [email, setEmail] = useState(() => localStorage.getItem('last_betania_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -26,54 +24,6 @@ const LoginPage = () => {
         'Too many requests': 'Muitas tentativas. Aguarde alguns minutos.',
       };
       setError(msgs[err.message] || 'Erro ao fazer login. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgot = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setError('Digite seu e-mail para receber o link de redefinição.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    try {
-      await resetPassword(email);
-      setSuccessMsg(`Link de redefinição enviado para ${email}. Verifique sua caixa de entrada.`);
-    } catch (err) {
-      setError('Erro ao enviar e-mail. Verifique o endereço digitado.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Caso a pessoa venha através do link enviado pro email
-    const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
-      setMode('update_password');
-    }
-  }, []);
-
-  const handleUpdatePassword = async (e) => {
-    e.preventDefault();
-    if (password.length < 6) {
-      setError('A nova senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    try {
-      await updatePassword(password);
-      setSuccessMsg('Sua senha foi atualizada com sucesso! Volte ao modo login para entrar.');
-      setPassword(''); // apaga
-      setMode('login'); // volta
-      // Remover os dados perigosos de reset da URL (como JWT access token visual)
-      window.history.replaceState(null, '', window.location.pathname);
-    } catch (err) {
-      setError('Não foi possível atualizar: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -98,131 +48,36 @@ const LoginPage = () => {
         {/* Divider */}
         <div style={styles.divider} />
 
-        {/* --- MODO ESQUECI MINHA SENHA --- */}
-        {mode === 'forgot' && (
-          <form onSubmit={handleForgot} style={styles.form}>
-            <div style={styles.modeHeader}>
-              <KeyRound size={22} color="#f9ab2d" />
-              <h2 style={styles.modeTitle}>Redefinir Senha</h2>
-            </div>
-            <p style={styles.modeDesc}>
-              Digite seu e-mail e enviaremos um link para criar uma nova senha.
-            </p>
-
-            {successMsg ? (
-              <div style={styles.successBox}>
-                <span>✅ {successMsg}</span>
-              </div>
-            ) : (
-              <>
-                <InputField
-                  icon={<Mail size={18} color="#999" />}
-                  type="email"
-                  placeholder="Seu e-mail"
-                  value={email}
-                  onChange={setEmail}
-                  autoComplete="email"
-                />
-
-                {error && <ErrorBox message={error} />}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1 }}
-                >
-                  {loading ? 'Enviando...' : 'Enviar Link de Redefinição'}
-                </button>
-              </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
-              style={styles.btnBack}
-            >
-              <ArrowLeft size={16} />
-              Voltar para o login
-            </button>
-          </form>
-        )}
-
         {/* --- MODO LOGIN --- */}
-        {mode === 'login' && (
-          <form onSubmit={handleLogin} style={styles.form} noValidate>
-            <h2 style={styles.welcomeTitle}>Bem-vindo(a) de volta! 👋</h2>
+        <form onSubmit={handleLogin} style={styles.form} noValidate>
+          <h2 style={styles.welcomeTitle}>Bem-vindo(a) de volta! 👋</h2>
 
-            <InputField
-              icon={<Mail size={18} color="#999" />}
-              type="email"
-              placeholder="E-mail"
-              value={email}
-              onChange={setEmail}
-              autoComplete="email"
-            />
+          <InputField
+            icon={<Mail size={18} color="#999" />}
+            type="email"
+            placeholder="E-mail"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+          />
 
-            <PasswordField
-              value={password}
-              onChange={setPassword}
-              show={showPassword}
-              onToggle={() => setShowPassword(v => !v)}
-            />
+          <PasswordField
+            value={password}
+            onChange={setPassword}
+            show={showPassword}
+            onToggle={() => setShowPassword(v => !v)}
+          />
 
-            {error && <ErrorBox message={error} />}
+          {error && <ErrorBox message={error} />}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setMode('forgot'); setError(''); setSuccessMsg(''); }}
-              style={styles.btnForgot}
-            >
-              Esqueci minha senha
-            </button>
-          </form>
-        )}
-
-        {/* --- MODO ATUALIZAR NOVA SENHA PÓS-EMAIL --- */}
-        {mode === 'update_password' && (
-          <form onSubmit={handleUpdatePassword} style={styles.form} noValidate>
-            <div style={styles.modeHeader}>
-              <KeyRound size={22} color="#f9ab2d" />
-              <h2 style={styles.modeTitle}>Criar Nova Senha</h2>
-            </div>
-            
-            <p style={styles.modeDesc}>
-              Digite a nova senha que você utilizará daqui em diante.
-            </p>
-
-            <PasswordField
-              value={password}
-              onChange={setPassword}
-              show={showPassword}
-              onToggle={() => setShowPassword(v => !v)}
-            />
-
-            {error && <ErrorBox message={error} />}
-            {successMsg && (
-              <div style={styles.successBox}>
-                <span>✅ {successMsg}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-            >
-              {loading ? 'Salvando...' : 'Salvar Nova Senha'}
-            </button>
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+        </form>
       </div>
 
       <p style={styles.footer}>
@@ -377,25 +232,6 @@ const styles = {
     margin: '0 0 0.25rem 0',
     textAlign: 'center',
   },
-  modeHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.6rem',
-    marginBottom: '0.25rem',
-    justifyContent: 'center',
-  },
-  modeTitle: {
-    fontSize: '1.2rem',
-    fontWeight: '600',
-    color: '#f9ab2d',
-    margin: 0,
-  },
-  modeDesc: {
-    fontSize: '0.875rem',
-    color: '#999',
-    textAlign: 'center',
-    margin: '-0.25rem 0 0.25rem 0',
-  },
   inputWrapper: {
     display: 'flex',
     alignItems: 'center',
@@ -448,34 +284,6 @@ const styles = {
     boxShadow: '0 4px 16px rgba(249,171,45,0.3)',
     marginTop: '0.25rem',
   },
-  btnForgot: {
-    background: 'none',
-    border: 'none',
-    color: '#f9ab2d',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    fontFamily: 'inherit',
-    padding: '0.25rem 0',
-    textAlign: 'center',
-    opacity: 0.85,
-    textDecoration: 'underline',
-    textDecorationColor: 'transparent',
-    transition: 'opacity 0.2s, text-decoration-color 0.2s',
-  },
-  btnBack: {
-    background: 'none',
-    border: 'none',
-    color: '#999',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    fontFamily: 'inherit',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.4rem',
-    padding: '0.25rem 0',
-    transition: 'color 0.2s',
-  },
   errorBox: {
     backgroundColor: 'rgba(239,68,68,0.1)',
     border: '1px solid rgba(239,68,68,0.4)',
@@ -483,16 +291,6 @@ const styles = {
     padding: '0.75rem 1rem',
     color: '#f87171',
     fontSize: '0.875rem',
-    textAlign: 'center',
-  },
-  successBox: {
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.4)',
-    borderRadius: '8px',
-    padding: '0.75rem 1rem',
-    color: '#4ade80',
-    fontSize: '0.875rem',
-    lineHeight: 1.5,
     textAlign: 'center',
   },
   footer: {

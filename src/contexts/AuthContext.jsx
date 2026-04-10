@@ -92,8 +92,7 @@ export const AuthProvider = ({ children }) => {
           event === 'SIGNED_IN' ||
           event === 'TOKEN_REFRESHED' ||
           event === 'USER_UPDATED' ||
-          event === 'INITIAL_SESSION' ||
-          event === 'PASSWORD_RECOVERY'
+          event === 'INITIAL_SESSION'
         ) {
           if (session?.user) {
             clearTimeout(safetyTimer);
@@ -148,17 +147,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    });
-    if (error) throw error;
-  };
 
-  const updatePassword = async (newPassword) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) throw error;
-  };
 
   const isAdmin = profile?.role === 'admin';
   const isStudent = profile?.role === 'student';
@@ -172,8 +161,7 @@ export const AuthProvider = ({ children }) => {
       isStudent,
       signIn,
       signOut,
-      resetPassword,
-      updatePassword,
+
     }}>
       {children}
     </AuthContext.Provider>

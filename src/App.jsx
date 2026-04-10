@@ -15,13 +15,84 @@ const LoadingScreen = () => (
     minHeight: '100vh',
     backgroundColor: '#1a1b1c',
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
+    flexDirection: 'column',
+    color: '#ffffff'
   }}>
-    <div style={{ textAlign: 'center' }}>
-      <Dumbbell size={64} color="#f9ab2d" style={{ margin: '0 auto 1rem', display: 'block' }} />
-      <p style={{ color: '#f9ab2d', fontSize: '1.25rem' }}>Carregando...</p>
-    </div>
+    <style>
+      {`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .skeleton {
+          background-color: #2a2b2c;
+          border-radius: 8px;
+          position: relative;
+          overflow: hidden;
+        }
+        .skeleton::after {
+          content: "";
+          position: absolute;
+          top: 0; right: 0; bottom: 0; left: 0;
+          transform: translateX(-100%);
+          background-image: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.05) 20%,
+            rgba(255, 255, 255, 0.1) 60%,
+            rgba(255, 255, 255, 0)
+          );
+          animation: shimmer 1.5s infinite linear;
+        }
+      `}
+    </style>
+    
+    <header style={{
+      backgroundColor: '#0f1011',
+      borderBottom: '2px solid #2a2b2c',
+      padding: '1.5rem 2rem'
+    }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+          <div className="skeleton" style={{ width: '220px', height: '28px' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="skeleton" style={{ width: '100px', height: '42px', borderRadius: '8px' }} />
+          <div className="skeleton" style={{ width: '160px', height: '42px', borderRadius: '8px' }} />
+          <div className="skeleton" style={{ width: '120px', height: '42px', borderRadius: '8px' }} />
+        </div>
+      </div>
+    </header>
+
+    <main style={{ maxWidth: '1400px', width: '100%', margin: '0 auto', padding: '2rem 1rem', flex: 1 }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        <div className="skeleton" style={{ flex: 1, minWidth: '250px', maxWidth: '400px', height: '44px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ width: '160px', height: '44px', borderRadius: '8px', marginLeft: 'auto' }} />
+      </div>
+
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+        gap: '1.5rem' 
+      }}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} style={{ backgroundColor: '#242526', borderRadius: '16px', padding: '1.5rem', border: '1px solid #3a3b3c' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="skeleton" style={{ width: '160px', height: '20px' }} />
+                <div className="skeleton" style={{ width: '100px', height: '14px' }} />
+              </div>
+              <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+               <div className="skeleton" style={{ width: '100%', height: '48px' }} />
+               <div className="skeleton" style={{ width: '100%', height: '48px' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
   </div>
 );
 

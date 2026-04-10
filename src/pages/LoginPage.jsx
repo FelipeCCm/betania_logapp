@@ -191,17 +191,13 @@ const LoginPage = () => {
         {/* --- MODO ATUALIZAR NOVA SENHA PÓS-EMAIL --- */}
         {mode === 'update_password' && (
           <form onSubmit={handleUpdatePassword} style={styles.form} noValidate>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={styles.logoIcon}>
-                <img src="/logo.svg" alt="Betânia Logo" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-              </div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0, marginTop: '1rem' }}>
-                Criar Nova Senha 🔑
-              </h2>
+            <div style={styles.modeHeader}>
+              <KeyRound size={22} color="#f9ab2d" />
+              <h2 style={styles.modeTitle}>Criar Nova Senha</h2>
             </div>
             
-            <p style={{ color: '#888', marginBottom: '1.5rem', fontSize: '0.9rem', textAlign: 'center' }}>
-              Digite a nova senha segura que você utilizará daqui em diante.
+            <p style={styles.modeDesc}>
+              Digite a nova senha que você utilizará daqui em diante.
             </p>
 
             <PasswordField
@@ -487,6 +483,7 @@ const styles = {
     padding: '0.75rem 1rem',
     color: '#f87171',
     fontSize: '0.875rem',
+    textAlign: 'center',
   },
   successBox: {
     backgroundColor: 'rgba(34,197,94,0.1)',
@@ -496,6 +493,7 @@ const styles = {
     color: '#4ade80',
     fontSize: '0.875rem',
     lineHeight: 1.5,
+    textAlign: 'center',
   },
   footer: {
     color: '#555',

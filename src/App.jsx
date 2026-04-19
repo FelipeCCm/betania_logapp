@@ -96,8 +96,59 @@ const LoadingScreen = () => (
   </div>
 );
 
+const AccountIssueScreen = ({ title, message, onSignOut }) => (
+  <div style={{
+    minHeight: '100vh',
+    backgroundColor: '#1a1b1c',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1.5rem',
+    color: '#ffffff'
+  }}>
+    <div style={{
+      maxWidth: '440px',
+      width: '100%',
+      backgroundColor: '#242526',
+      border: '1px solid #3a3b3c',
+      borderRadius: '16px',
+      padding: '2rem',
+      textAlign: 'center'
+    }}>
+      <Dumbbell size={48} color="#f9ab2d" style={{ marginBottom: '1rem' }} />
+      <h2 style={{ color: '#f9ab2d', margin: '0 0 0.75rem 0' }}>{title}</h2>
+      <p style={{ color: '#cccccc', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>{message}</p>
+      <button
+        onClick={onSignOut}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#f9ab2d',
+          color: '#1a1b1c',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          fontSize: '1rem'
+        }}
+      >
+        Sair
+      </button>
+    </div>
+  </div>
+);
+
 function App() {
-  const { user, profile, loading: authLoading, isAdmin, isStudent } = useAuth();
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    profileError,
+    isAdmin,
+    isStudent,
+    isUnlinkedStudent,
+    signOut,
+  } = useAuth();
   const [currentPage, setCurrentPage] = useState('students');
   const [students, setStudents] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -107,16 +158,16 @@ function App() {
   const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
-    // Só carrega dados depois que auth resolveu E há um usuário com perfil
-    if (!authLoading && user && profile) {
+    // Só carrega dados quando auth resolveu, há usuário com perfil válido
+    // e (se student) a conta está vinculada
+    const canLoad = !authLoading && user && profile && !isUnlinkedStudent;
+    if (canLoad) {
       loadData();
-    }
-    // Se auth resolveu mas não há usuário, garante que não ficamos em loading
-    if (!authLoading && (!user || !profile)) {
+    } else if (!authLoading) {
       setDataLoading(false);
       setDataReady(false);
     }
-  }, [authLoading, user, profile]);
+  }, [authLoading, user, profile, isUnlinkedStudent]);
 
   // Se aluno, força aba students
   useEffect(() => {
@@ -148,10 +199,38 @@ function App() {
   // 1. Auth ainda resolvendo
   if (authLoading) return <LoadingScreen />;
 
-  // 2. Não autenticado ou sem perfil → Login
-  if (!user || !profile) return <LoginPage />;
+  // 2. Não autenticado → Login
+  if (!user) return <LoginPage />;
 
-  // 3. Dados ainda carregando após login
+  // 3. Autenticado mas sem perfil válido → mensagem + forçar sign-out
+  if (!profile) {
+    const messages = {
+      profile_missing: 'Sua conta ainda não tem um perfil vinculado. Contate o administrador para concluir o cadastro.',
+      invalid_role: 'Sua conta está com um papel inválido. Contate o administrador.',
+      profile_fetch_error: 'Não foi possível carregar seu perfil. Tente novamente em instantes.',
+      network_error: 'Sem conexão com o servidor. Verifique sua internet/DNS e recarregue a página.',
+    };
+    return (
+      <AccountIssueScreen
+        title="Conta não habilitada"
+        message={messages[profileError] || 'Não foi possível carregar sua conta.'}
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  // 4. Aluno sem student_id vinculado
+  if (isUnlinkedStudent) {
+    return (
+      <AccountIssueScreen
+        title="Aguardando ativação"
+        message="Sua conta foi criada, mas ainda não foi vinculada a um cadastro de aluno. Contate o administrador."
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  // 5. Dados ainda carregando após login
   if (dataLoading || !dataReady) return <LoadingScreen />;
 
   // 4. App principal

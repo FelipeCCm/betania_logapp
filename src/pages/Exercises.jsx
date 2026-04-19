@@ -90,15 +90,36 @@ const ExercisesPage = () => {
     }
   };
 
-  // Agrupar exercícios por grupo muscular
+  // Normaliza o nome do grupo para agrupar variações (acentos, caixa, espaços)
+  // mas mantém o nome original cadastrado como rótulo exibido.
+  const normalizeGroupKey = (value) =>
+    (value || 'Sem Grupo')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Agrupar exercícios por grupo muscular (usando chave normalizada)
   const groupedExercises = exercises.reduce((acc, exercise) => {
-    const group = exercise.muscle_group || 'Sem Grupo';
-    if (!acc[group]) {
-      acc[group] = [];
+    const rawGroup = exercise.muscle_group?.trim() || 'Sem Grupo';
+    const key = normalizeGroupKey(rawGroup);
+    if (!acc[key]) {
+      acc[key] = { label: rawGroup, items: [] };
     }
-    acc[group].push(exercise);
+    acc[key].items.push(exercise);
     return acc;
   }, {});
+
+  // Lista única de grupos existentes para sugerir no formulário
+  const existingGroups = Array.from(
+    new Map(
+      exercises
+        .map((e) => e.muscle_group?.trim())
+        .filter(Boolean)
+        .map((g) => [normalizeGroupKey(g), g])
+    ).values()
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
   return (
     <div>
@@ -142,6 +163,7 @@ const ExercisesPage = () => {
           onSave={handleAddExercise}
           loading={loading}
           showAlert={showAlert}
+          existingGroups={existingGroups}
         />
       )}
 
@@ -161,24 +183,26 @@ const ExercisesPage = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {Object.entries(groupedExercises).map(([muscleGroup, groupExercises]) => (
-            <div key={muscleGroup}>
-              <h3 style={{ 
-                fontSize: '1.5rem', 
-                color: '#f9ab2d', 
+          {Object.entries(groupedExercises)
+            .sort(([, a], [, b]) => a.label.localeCompare(b.label, 'pt-BR'))
+            .map(([groupKey, { label, items }]) => (
+            <div key={groupKey}>
+              <h3 style={{
+                fontSize: '1.5rem',
+                color: '#f9ab2d',
                 marginBottom: '1rem',
                 borderBottom: '2px solid #3a3b3c',
                 paddingBottom: '0.5rem'
               }}>
-                {muscleGroup} ({groupExercises.length})
+                {label} ({items.length})
               </h3>
-              
-              <div style={{ 
-                display: 'grid', 
+
+              <div style={{
+                display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
                 gap: '1rem'
               }}>
-                {groupExercises.map(exercise => (
+                {items.map(exercise => (
                   <ExerciseCard
                     key={exercise.id}
                     exercise={exercise}
@@ -189,6 +213,7 @@ const ExercisesPage = () => {
                     onDelete={() => handleDeleteExercise(exercise)}
                     loading={loading}
                     showAlert={showAlert}
+                    existingGroups={existingGroups}
                   />
                 ))}
               </div>
@@ -204,7 +229,7 @@ const ExercisesPage = () => {
 };
 
 // Modal de Formulário para Adicionar
-const ExerciseFormModal = ({ onClose, onSave, loading, showAlert }) => {
+const ExerciseFormModal = ({ onClose, onSave, loading, showAlert, existingGroups = [] }) => {
   const [formData, setFormData] = useState({
     name: '',
     muscle_group: ''
@@ -281,6 +306,7 @@ const ExerciseFormModal = ({ onClose, onSave, loading, showAlert }) => {
             value={formData.muscle_group}
             onChange={(e) => setFormData({ ...formData, muscle_group: e.target.value })}
             placeholder="Ex: Peito"
+            list="muscle-groups-suggestions"
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -291,7 +317,11 @@ const ExerciseFormModal = ({ onClose, onSave, loading, showAlert }) => {
               fontSize: '1rem'
             }}
           />
-          
+          <datalist id="muscle-groups-suggestions">
+            {existingGroups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -347,7 +377,8 @@ const ExerciseCard = ({
   onSave,
   onDelete,
   loading,
-  showAlert
+  showAlert,
+  existingGroups = []
 }) => {
   const [formData, setFormData] = useState({
     name: exercise.name,
@@ -410,6 +441,7 @@ const ExerciseCard = ({
             type="text"
             value={formData.muscle_group}
             onChange={(e) => setFormData({ ...formData, muscle_group: e.target.value })}
+            list="muscle-groups-suggestions"
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -420,6 +452,11 @@ const ExerciseCard = ({
               fontSize: '1rem'
             }}
           />
+          <datalist id="muscle-groups-suggestions">
+            {existingGroups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>

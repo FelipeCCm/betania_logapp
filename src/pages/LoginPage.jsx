@@ -13,17 +13,20 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      setError('Preencha e-mail e senha.');
+      return;
+    }
+
     setLoading(true);
     try {
-      localStorage.setItem('last_betania_email', email);
-      await signIn(email, password);
+      localStorage.setItem('last_betania_email', cleanEmail);
+      await signIn(cleanEmail, password);
     } catch (err) {
-      const msgs = {
-        'Invalid login credentials': 'E-mail ou senha incorretos.',
-        'Email not confirmed': 'Confirme seu e-mail antes de fazer login.',
-        'Too many requests': 'Muitas tentativas. Aguarde alguns minutos.',
-      };
-      setError(msgs[err.message] || 'Erro ao fazer login. Tente novamente.');
+      // AuthContext já normaliza a mensagem e anexa err.code
+      setError(err.message || 'Erro ao fazer login.');
     } finally {
       setLoading(false);
     }

@@ -3,166 +3,197 @@ import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
-// Race any promise against a hard wall-clock timeout.
-// Extension-proof: doesn't rely on AbortController or fetch internals.
-const withTimeout = (promise, ms) =>
-  Promise.race([
-    promise,
-    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
-  ]);
+const isNetworkError = (err) => {
+  if (!err) return false;
+  const msg = (err.message || '').toLowerCase();
+  return (
+    err.name === 'TypeError' ||
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('err_name_not_resolved') ||
+    msg.includes('load failed')
+  );
+};
 
-// Read the stored Supabase session from localStorage synchronously — zero network.
-const readCachedUser = () => {
-  try {
-    const raw = localStorage.getItem('betania_auth_token');
-    if (!raw) return null;
-    const session = JSON.parse(raw);
-    return session?.user ?? null;
-  } catch {
-    return null;
+const normalizeAuthError = (err) => {
+  if (isNetworkError(err)) {
+    const e = new Error(
+      'Não foi possível conectar ao servidor. Verifique sua conexão com a internet (ou o DNS) e tente novamente.'
+    );
+    e.code = 'network_error';
+    return e;
   }
+  const dict = {
+    'Invalid login credentials': 'E-mail ou senha incorretos.',
+    'Email not confirmed': 'Confirme seu e-mail antes de fazer login.',
+    'Too many requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+  };
+  const friendly = dict[err?.message] || err?.message || 'Erro desconhecido ao autenticar.';
+  const e = new Error(friendly);
+  e.code = err?.code || 'auth_error';
+  return e;
+};
+
+const fetchUserProfile = async (userId) => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id, role, student_id, operator_name')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 };
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(null);
+  const mountedRef = useRef(true);
 
-  // Prevent double-resolution (safety timer vs. normal flow)
-  const resolvedRef = useRef(false);
-
-  const resolveAuth = (resolvedUser, resolvedProfile) => {
-    if (resolvedRef.current) return;
-    resolvedRef.current = true;
-    setUser(resolvedUser);
-    setProfile(resolvedProfile);
-    setLoading(false);
-  };
-
-  const fetchProfile = (userId) =>
-    withTimeout(
-      supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-        .then(({ data, error }) => {
-          if (error || !data) return null;
-          return data;
-        })
-        .catch(() => null),
-      5000 // 5 s — extension-proof because Promise.race lives outside fetch
-    );
-
+  // -------------------------------------------------------------------------
+  // Efeito 1: fonte da verdade da SESSÃO
+  // - getSession() recupera a sessão persistida no refresh
+  // - onAuthStateChange escuta login/logout/refresh de token
+  // IMPORTANTE: o callback de onAuthStateChange é SÍNCRONO (sem await em
+  // queries do supabase-js), para evitar o deadlock conhecido da state
+  // machine interna do SDK.
+  // -------------------------------------------------------------------------
   useEffect(() => {
-    let isMounted = true;
+    mountedRef.current = true;
+    let cancelled = false;
 
-    // ── Phase 1: Unblock from localStorage immediately ──────────────────────
-    const cachedUser = readCachedUser();
+    const applyUser = (sessionUser) => {
+      if (!mountedRef.current || cancelled) return;
+      if (sessionUser) {
+        // Preserva a mesma referência se o id não mudou
+        setUser((prev) => (prev?.id === sessionUser.id ? prev : sessionUser));
+      } else {
+        setUser(null);
+        setProfile(null);
+        setProfileError(null);
+        setLoading(false);
+      }
+    };
 
-    if (!cachedUser) {
-      // No stored session at all → show login immediately, no network needed
-      resolveAuth(null, null);
-    } else {
-      // We have a cached user — fetch their profile (capped at 5 s)
-      fetchProfile(cachedUser.id).then((p) => {
-        if (!isMounted) return;
-        // Whether profile loaded or not, unblock the app.
-        // If p is null (network down / timeout) force re-login by clearing user too.
-        resolveAuth(p ? cachedUser : null, p);
+    // Sessão inicial (após F5, por exemplo)
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => applyUser(session?.user ?? null))
+      .catch((err) => {
+        console.error('[Auth] getSession falhou:', err);
+        if (mountedRef.current && !cancelled) setLoading(false);
       });
-    }
 
-    // ── Phase 2: Hard safety cap — ALWAYS unblock after 3 s ─────────────────
-    // Fires before the 5 s fetchProfile timeout, so in the worst case the user
-    // sees the login screen after 3 s and can log in normally.
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) {
-        console.warn('[Auth] Safety timeout reached — forcing login screen');
-        resolveAuth(null, null);
-      }
-    }, 3000);
-
-    // ── Phase 3: Background listener for live auth events ───────────────────
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!isMounted) return;
-
-        if (
-          event === 'SIGNED_IN' ||
-          event === 'TOKEN_REFRESHED' ||
-          event === 'USER_UPDATED' ||
-          event === 'INITIAL_SESSION'
-        ) {
-          if (session?.user) {
-            clearTimeout(safetyTimer);
-            const p = await withTimeout(fetchProfile(session.user.id), 5000);
-            if (isMounted) {
-              // Use resolveAuth for the first resolution, then direct setState
-              if (!resolvedRef.current) {
-                resolveAuth(session.user, p);
-              } else {
-                setUser(session.user);
-                setProfile(p);
-                setLoading(false);
-              }
-            }
-          } else {
-            // INITIAL_SESSION with no session means expired/no token
-            if (isMounted) resolveAuth(null, null);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          if (isMounted) {
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-          }
-        }
-      }
-    );
+    // Escuta mudanças de auth — callback síncrono
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyUser(session?.user ?? null);
+    });
 
     return () => {
-      isMounted = false;
-      clearTimeout(safetyTimer);
+      cancelled = true;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // -------------------------------------------------------------------------
+  // Efeito 2: busca o PERFIL sempre que o user.id mudar
+  // Rodar fora do callback de onAuthStateChange evita o deadlock e centraliza
+  // o controle de loading.
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let cancelled = false;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const data = await fetchUserProfile(user.id);
+        if (cancelled || !mountedRef.current) return;
+
+        if (!data) {
+          setProfile(null);
+          setProfileError('profile_missing');
+        } else if (!['admin', 'student'].includes(data.role)) {
+          setProfile(null);
+          setProfileError('invalid_role');
+        } else {
+          setProfile(data);
+          setProfileError(null);
+        }
+      } catch (err) {
+        if (cancelled || !mountedRef.current) return;
+        console.error('[Auth] Erro ao buscar perfil:', err);
+        setProfile(null);
+        setProfileError(isNetworkError(err) ? 'network_error' : 'profile_fetch_error');
+      } finally {
+        if (!cancelled && mountedRef.current) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw normalizeAuthError(err);
+    }
   };
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
-      console.error(e);
+      console.error('[Auth] Erro ao sair:', e);
     } finally {
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
+      if (mountedRef.current) {
+        setUser(null);
+        setProfile(null);
+        setProfileError(null);
+        setLoading(false);
+      }
     }
   };
 
-
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    try {
+      const data = await fetchUserProfile(user.id);
+      if (mountedRef.current) setProfile(data || null);
+    } catch (err) {
+      console.error('[Auth] Erro ao atualizar perfil:', err);
+    }
+  };
 
   const isAdmin = profile?.role === 'admin';
   const isStudent = profile?.role === 'student';
+  const isUnlinkedStudent = isStudent && !profile?.student_id;
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      loading,
-      isAdmin,
-      isStudent,
-      signIn,
-      signOut,
-
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        profileError,
+        isAdmin,
+        isStudent,
+        isUnlinkedStudent,
+        signIn,
+        signOut,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

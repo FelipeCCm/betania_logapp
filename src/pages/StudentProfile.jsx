@@ -59,25 +59,38 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
       // Buscar todas as séries de uma vez (otimizado)
       const { data: allSets } = await supabase
         .from('exercise_sets')
-        .select('progress_record_id, set_type, weight, reps, set_number')
+        .select('progress_record_id, set_type, weight, reps, set_number, week_number')
         .in('progress_record_id', recordIds);
+
+      // Identificar a última semana cadastrada por progress_record
+      const maxWeekByRecord = {};
+      (allSets || []).forEach(set => {
+        const wk = set.week_number || 1;
+        const recordId = set.progress_record_id;
+        if (maxWeekByRecord[recordId] === undefined || wk > maxWeekByRecord[recordId]) {
+          maxWeekByRecord[recordId] = wk;
+        }
+      });
+
+      // Considerar apenas séries da última semana para o resumo do card
+      const lastWeekSets = (allSets || []).filter(
+        set => (set.week_number || 1) === maxWeekByRecord[set.progress_record_id]
+      );
 
       // Contar séries e identificar última série válida por exercício
       const setsCountMap = {};
       const lastValidSetMap = {};
 
-      if (allSets) {
-        allSets.forEach(set => {
-          setsCountMap[set.progress_record_id] = (setsCountMap[set.progress_record_id] || 0) + 1;
+      lastWeekSets.forEach(set => {
+        setsCountMap[set.progress_record_id] = (setsCountMap[set.progress_record_id] || 0) + 1;
 
-          if (['valid_1', 'valid_2', 'valid_3'].includes(set.set_type)) {
-            const current = lastValidSetMap[set.progress_record_id];
-            if (!current || set.set_number > current.set_number) {
-              lastValidSetMap[set.progress_record_id] = set;
-            }
+        if (['valid_1', 'valid_2', 'valid_3'].includes(set.set_type)) {
+          const current = lastValidSetMap[set.progress_record_id];
+          if (!current || set.set_number > current.set_number) {
+            lastValidSetMap[set.progress_record_id] = set;
           }
-        });
-      }
+        }
+      });
 
       // Atribuir contagem real e valores de exibição a cada exercício
       exercises.forEach(exercise => {

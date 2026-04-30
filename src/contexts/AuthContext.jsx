@@ -27,6 +27,7 @@ const normalizeAuthError = (err) => {
     'Invalid login credentials': 'E-mail ou senha incorretos.',
     'Email not confirmed': 'Confirme seu e-mail antes de fazer login.',
     'Too many requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+    'User already registered': 'Este e-mail já está cadastrado. Tente fazer login.',
   };
   const friendly = dict[err?.message] || err?.message || 'Erro desconhecido ao autenticar.';
   const e = new Error(friendly);
@@ -150,6 +151,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const signUp = async (email, password, metadata = {}) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata },
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw normalizeAuthError(err);
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -190,6 +205,7 @@ export const AuthProvider = ({ children }) => {
         isStudent,
         isUnlinkedStudent,
         signIn,
+        signUp,
         signOut,
         refreshProfile,
       }}

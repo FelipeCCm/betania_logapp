@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 .env
 .sql
+database_self_signup_trigger.sql

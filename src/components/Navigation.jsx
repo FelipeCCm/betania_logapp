@@ -49,13 +49,26 @@ const Navigation = ({ currentPage, onPageChange, role }) => {
             borderRadius: '8px',
             cursor: 'pointer',
             fontWeight: currentPage === id ? 'bold' : 'normal',
-            transition: 'all 0.3s',
+            transition: 'all 0.2s',
             fontSize: '0.875rem',
             whiteSpace: 'nowrap',
             fontFamily: 'inherit',
+            boxShadow: currentPage === id ? '0 4px 12px rgba(249,171,45,0.28)' : 'none',
+          }}
+          onMouseEnter={(e) => {
+            if (currentPage !== id) {
+              e.currentTarget.style.backgroundColor = 'rgba(249,171,45,0.06)';
+              e.currentTarget.style.borderColor = '#f9ab2d';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (currentPage !== id) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = '#3a3b3c';
+            }
           }}
         >
-          <Icon size={18} />
+          <Icon size={18} aria-hidden="true" />
           {!isMobile && <span>{label}</span>}
         </button>
       ))}

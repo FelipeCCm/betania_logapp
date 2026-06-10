@@ -77,7 +77,7 @@ const LoadingScreen = () => (
         gap: '1.5rem' 
       }}>
         {[...Array(6)].map((_, i) => (
-          <div key={i} style={{ backgroundColor: '#242526', borderRadius: '16px', padding: '1.5rem', border: '1px solid #3a3b3c' }}>
+          <div key={i} style={{ backgroundColor: '#242526', borderRadius: '16px', padding: '1.5rem', border: '1px solid #3a3b3c', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div className="skeleton" style={{ width: '160px', height: '20px' }} />
@@ -113,7 +113,8 @@ const AccountIssueScreen = ({ title, message, onSignOut }) => (
       border: '1px solid #3a3b3c',
       borderRadius: '16px',
       padding: '2rem',
-      textAlign: 'center'
+      textAlign: 'center',
+      boxShadow: '0 24px 48px rgba(0,0,0,0.5)'
     }}>
       <Dumbbell size={48} color="#f9ab2d" style={{ marginBottom: '1rem' }} />
       <h2 style={{ color: '#f9ab2d', margin: '0 0 0.75rem 0' }}>{title}</h2>
@@ -239,7 +240,10 @@ function App() {
       <header style={{
         backgroundColor: '#0f1011',
         borderBottom: '2px solid #f9ab2d',
-        padding: '1.5rem 2rem'
+        padding: '1.5rem 2rem',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+        position: 'relative',
+        zIndex: 5
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>

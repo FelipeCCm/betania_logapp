@@ -174,9 +174,10 @@ const ExercisesPage = () => {
           padding: '3rem',
           backgroundColor: '#2a2b2c',
           borderRadius: '12px',
-          border: '2px dashed #3a3b3c'
+          border: '2px dashed #3a3b3c',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
         }}>
-          <Dumbbell size={48} color="#f9ab2d" style={{ margin: '0 auto 1rem' }} />
+          <Dumbbell size={48} color="#f9ab2d" style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
           <p style={{ color: '#999', fontSize: '1.1rem' }}>
             Nenhum exercício cadastrado ainda. Clique em "Novo Exercício" para começar!
           </p>
@@ -263,7 +264,8 @@ const ExerciseFormModal = ({ onClose, onSave, loading, showAlert, existingGroups
         borderRadius: '12px',
         width: '100%',
         maxWidth: '500px',
-        border: '2px solid #f9ab2d'
+        border: '2px solid #f9ab2d',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <h3 style={{ color: '#f9ab2d', margin: 0 }}>Adicionar Novo Exercício</h3>
@@ -399,7 +401,8 @@ const ExerciseCard = ({
         backgroundColor: '#2a2b2c',
         padding: '1.5rem',
         borderRadius: '12px',
-        border: '2px solid #f9ab2d'
+        border: '2px solid #f9ab2d',
+        boxShadow: '0 8px 20px rgba(249,171,45,0.18)'
       }}>
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ 
@@ -510,15 +513,29 @@ const ExerciseCard = ({
   }
 
   return (
-    <div style={{
-      backgroundColor: '#2a2b2c',
-      padding: '1.5rem',
-      borderRadius: '12px',
-      border: '1px solid #3a3b3c',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem'
-    }}>
+    <div
+      style={{
+        backgroundColor: '#2a2b2c',
+        padding: '1.5rem',
+        borderRadius: '12px',
+        border: '1px solid #3a3b3c',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
+        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#f9ab2d';
+        e.currentTarget.style.boxShadow = '0 8px 20px rgba(249,171,45,0.14)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#3a3b3c';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.22)';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
+    >
       <div style={{ flex: 1 }}>
         <h4 style={{ 
           fontSize: '1.25rem', 

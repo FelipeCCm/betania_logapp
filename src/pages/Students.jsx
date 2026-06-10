@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import StudentList from '../components/StudentList';
 import StudentForm from '../components/StudentForm';
 import StudentProfile from './StudentProfile';
@@ -66,6 +66,7 @@ const StudentsPage = ({ students, onUpdate, exercises, profile }) => {
           onUpdate();
         }}
         hideBack={isStudent}
+        isStudentView={isStudent}
       />
     );
   }
@@ -133,8 +134,10 @@ const StudentsPage = ({ students, onUpdate, exercises, profile }) => {
             borderRadius: '8px',
             color: '#ffffff',
             fontSize: '1rem',
-            transition: 'border-color 0.3s',
-            outline: 'none'
+            transition: 'border-color 0.3s, box-shadow 0.3s',
+            outline: 'none',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.22)',
+            fontFamily: 'inherit'
           }}
           onFocus={(e) => {
             e.target.style.borderColor = '#f9ab2d';
@@ -148,34 +151,34 @@ const StudentsPage = ({ students, onUpdate, exercises, profile }) => {
             onClick={() => setSearchTerm('')}
             style={{
               position: 'absolute',
-              right: '1rem',
+              right: '0.75rem',
               top: '50%',
               transform: 'translateY(-50%)',
               background: 'none',
               border: 'none',
-              color: '#999',
               cursor: 'pointer',
-              fontSize: '1.5rem',
-              padding: '0.25rem',
-              width: '24px',
-              height: '24px',
+              padding: '0.35rem',
+              width: '28px',
+              height: '28px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s, color 0.2s',
+              color: '#999'
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#3a3b3c';
-              e.target.style.color = '#f9ab2d';
+              e.currentTarget.style.backgroundColor = '#3a3b3c';
+              e.currentTarget.style.color = '#f9ab2d';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = '#999';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#999';
             }}
             title="Limpar busca"
+            aria-label="Limpar busca"
           >
-            ×
+            <X size={16} aria-hidden="true" />
           </button>
         )}
       </div>

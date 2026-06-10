@@ -83,7 +83,8 @@ const ProgressPage = ({ students, exercises, onUpdate }) => {
         backgroundColor: '#2a2b2c',
         padding: '2rem',
         borderRadius: '12px',
-        border: '2px solid #f9ab2d'
+        border: '2px solid #f9ab2d',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
       }}>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1.5rem' }}>

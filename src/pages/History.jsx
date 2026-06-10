@@ -38,7 +38,8 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
         padding: '1.25rem',
         borderRadius: '12px',
         marginBottom: '2rem',
-        border: '1px solid #3a3b3c'
+        border: '1px solid #3a3b3c',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.28)'
       }}>
         <div style={{
           display: 'grid',
@@ -102,9 +103,10 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
           padding: '2.5rem',
           backgroundColor: '#2a2b2c',
           borderRadius: '12px',
-          border: '2px dashed #3a3b3c'
+          border: '2px dashed #3a3b3c',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
         }}>
-          <HistoryIcon size={48} color="#f9ab2d" />
+          <HistoryIcon size={48} color="#f9ab2d" aria-hidden="true" />
           <p style={{ color: '#999', marginTop: '1rem' }}>
             Nenhum registro encontrado
           </p>
@@ -121,7 +123,19 @@ const HistoryPage = ({ students, exercises, progressRecords }) => {
                 border: '1px solid #3a3b3c',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.75rem'
+                gap: '0.75rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
+                transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#f9ab2d';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(249,171,45,0.12)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#3a3b3c';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.22)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               <strong style={{ color: '#f9ab2d' }}>

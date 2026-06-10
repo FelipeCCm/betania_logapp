@@ -45,7 +45,8 @@ const StudentForm = ({ onClose, onSuccess }) => {
         borderRadius: '12px',
         width: '90%',
         maxWidth: '500px',
-        border: '2px solid #f9ab2d'
+        border: '2px solid #f9ab2d',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <h3 style={{ color: '#f9ab2d', margin: 0 }}>Adicionar Novo Aluno</h3>

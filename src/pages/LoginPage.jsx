@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, Hand, Dumbbell, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
@@ -120,7 +120,10 @@ const LoginPage = () => {
         {mode === 'login' ? (
           /* --- MODO LOGIN --- */
           <form onSubmit={handleLogin} style={styles.form} noValidate>
-            <h2 style={styles.welcomeTitle}>Bem-vindo(a) de volta! 👋</h2>
+            <h2 style={styles.welcomeTitle}>
+              <Hand size={22} color="#f9ab2d" aria-hidden="true" />
+              <span>Bem-vindo(a) de volta!</span>
+            </h2>
 
             <InputField
               icon={<Mail size={18} color="#999" />}
@@ -163,7 +166,10 @@ const LoginPage = () => {
         ) : (
           /* --- MODO CADASTRO --- */
           <form onSubmit={handleSignup} style={styles.form} noValidate>
-            <h2 style={styles.welcomeTitle}>Criar conta de aluno 💪</h2>
+            <h2 style={styles.welcomeTitle}>
+              <Dumbbell size={22} color="#f9ab2d" aria-hidden="true" />
+              <span>Criar conta de aluno</span>
+            </h2>
 
             <InputField
               icon={<User size={18} color="#999" />}
@@ -298,13 +304,15 @@ const PasswordField = ({
 
 const ErrorBox = ({ message }) => (
   <div style={styles.errorBox}>
-    <span>⚠️ {message}</span>
+    <AlertCircle size={16} color="#f87171" aria-hidden="true" style={{ flexShrink: 0 }} />
+    <span>{message}</span>
   </div>
 );
 
 const InfoBox = ({ message }) => (
   <div style={styles.infoBox}>
-    <span>ℹ️ {message}</span>
+    <Info size={16} color="#f9ab2d" aria-hidden="true" style={{ flexShrink: 0 }} />
+    <span>{message}</span>
   </div>
 );
 
@@ -401,6 +409,10 @@ const styles = {
     color: '#ffffff',
     margin: '0 0 0.25rem 0',
     textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
   },
   inputWrapper: {
     display: 'flex',
@@ -461,7 +473,10 @@ const styles = {
     padding: '0.75rem 1rem',
     color: '#f87171',
     fontSize: '0.875rem',
-    textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
   },
   infoBox: {
     backgroundColor: 'rgba(249,171,45,0.1)',
@@ -470,7 +485,10 @@ const styles = {
     padding: '0.75rem 1rem',
     color: '#f9ab2d',
     fontSize: '0.875rem',
-    textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
   },
   btnLink: {
     background: 'none',

@@ -202,7 +202,8 @@ const ExerciseSetsModal = ({
           overflow: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          transition: 'max-width 0.2s ease'
+          transition: 'max-width 0.2s ease',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)'
         }}
       >
         {/* HEADER */}
@@ -234,7 +235,9 @@ const ExerciseSetsModal = ({
                 fontSize: '0.85rem'
               }}
             >
-              {studentName} • {exerciseName}
+              {studentName}
+              <span style={{ opacity: 0.4, margin: '0 0.5rem' }}>•</span>
+              {exerciseName}
             </p>
           </div>
 

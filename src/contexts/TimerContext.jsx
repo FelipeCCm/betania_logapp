@@ -39,6 +39,15 @@ export const TimerProvider = ({ children }) => {
     }
   };
 
+  // Define o tempo e inicia em um único passo (evita ler remainingSeconds
+  // defasado ao chamar setTime() + start() em sequência).
+  const startWith = (totalSeconds) => {
+    const safeSeconds = Math.max(0, Math.min(totalSeconds, MAX_TOTAL_SECONDS));
+    setInitialSeconds(safeSeconds);
+    setRemainingSeconds(safeSeconds);
+    setIsRunning(safeSeconds > 0);
+  };
+
   const pause = () => {
     setIsRunning(false);
   };
@@ -54,6 +63,7 @@ export const TimerProvider = ({ children }) => {
       initialSeconds,
       isRunning,
       setTime,
+      startWith,
       start,
       pause,
       reset,

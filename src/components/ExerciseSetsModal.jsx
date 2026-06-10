@@ -23,7 +23,8 @@ const emptySet = () => ({
   set_type: 'warmup',
   weight: '',
   reps: '',
-  notes: ''
+  notes: '',
+  rest_seconds: 0
 });
 
 const ExerciseSetsModal = ({
@@ -80,7 +81,8 @@ const ExerciseSetsModal = ({
           set_type: 'valid_1',
           weight: progressRecord.weight,
           reps: progressRecord.reps,
-          notes: ''
+          notes: '',
+          rest_seconds: 0
         })
       );
       setWeeks([{ weekNumber: 1, sets: legacy.length ? legacy : [emptySet()] }]);
@@ -108,9 +110,15 @@ const ExerciseSetsModal = ({
 
   const addSet = (weekIdx) => {
     setWeeks((prev) =>
-      prev.map((w, wi) =>
-        wi !== weekIdx ? w : { ...w, sets: [...w.sets, emptySet()] }
-      )
+      prev.map((w, wi) => {
+        if (wi !== weekIdx) return w;
+        // Herda tipo e descanso da série anterior (preserva o tempo do aluno)
+        const last = w.sets[w.sets.length - 1];
+        const novo = last
+          ? { ...emptySet(), set_type: last.set_type, rest_seconds: Number(last.rest_seconds) || 0 }
+          : emptySet();
+        return { ...w, sets: [...w.sets, novo] };
+      })
     );
   };
 
@@ -129,7 +137,17 @@ const ExerciseSetsModal = ({
       const nextNumber = prev.length
         ? Math.max(...prev.map((w) => w.weekNumber)) + 1
         : 1;
-      return [...prev, { weekNumber: nextNumber, sets: [emptySet()] }];
+      // Herda a estrutura da última semana: mesmos tipos e descansos,
+      // carga/reps em branco para os valores novos da semana.
+      const template = prev.length ? prev[prev.length - 1].sets : [];
+      const sets = template.length
+        ? template.map((s) => ({
+            ...emptySet(),
+            set_type: s.set_type,
+            rest_seconds: Number(s.rest_seconds) || 0
+          }))
+        : [emptySet()];
+      return [...prev, { weekNumber: nextNumber, sets }];
     });
   };
 
@@ -156,7 +174,8 @@ const ExerciseSetsModal = ({
         weight: Number(s.weight) || 0,
         reps: Number(s.reps) || 0,
         notes: s.notes || '',
-        week_number: w.weekNumber
+        week_number: w.weekNumber,
+        rest_seconds: Number(s.rest_seconds) || 0
       }))
     );
 

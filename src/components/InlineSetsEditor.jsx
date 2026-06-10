@@ -141,7 +141,15 @@ const InlineSetsEditor = ({ progressRecord, onSaved, showAlert, showConfirm }) =
 
   const addSet = () => {
     setWeeks((prev) =>
-      prev.map((w, wi) => (wi !== currentWeekIdx ? w : { ...w, sets: [...w.sets, emptySet()] }))
+      prev.map((w, wi) => {
+        if (wi !== currentWeekIdx) return w;
+        // Herda tipo e descanso da série anterior para não redigitar
+        const last = w.sets[w.sets.length - 1];
+        const novo = last
+          ? { ...emptySet(), set_type: last.set_type, rest_seconds: Number(last.rest_seconds) || 0 }
+          : emptySet();
+        return { ...w, sets: [...w.sets, novo] };
+      })
     );
   };
 
@@ -183,7 +191,17 @@ const InlineSetsEditor = ({ progressRecord, onSaved, showAlert, showConfirm }) =
   const addNextWeek = () => {
     setWeeks((prev) => {
       const nextNumber = prev.length ? Math.max(...prev.map((w) => w.weekNumber)) + 1 : 1;
-      const next = [...prev, { weekNumber: nextNumber, sets: [emptySet()] }];
+      // Herda a estrutura da última semana: mesmos tipos e descansos,
+      // carga/reps em branco para os valores novos da semana.
+      const template = prev.length ? prev[prev.length - 1].sets : [];
+      const sets = template.length
+        ? template.map((s) => ({
+            ...emptySet(),
+            set_type: s.set_type,
+            rest_seconds: Number(s.rest_seconds) || 0
+          }))
+        : [emptySet()];
+      const next = [...prev, { weekNumber: nextNumber, sets }];
       setCurrentWeekIdx(next.length - 1);
       return next;
     });

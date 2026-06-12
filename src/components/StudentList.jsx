@@ -112,7 +112,8 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
               justifyContent: 'center',
               fontSize: '1.5rem',
               fontWeight: 'bold',
-              color: '#1a1b1c'
+              color: '#1a1b1c',
+              flexShrink: 0
             }}>
               {student.name.charAt(0).toUpperCase()}
             </div>

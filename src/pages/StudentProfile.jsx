@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, LayoutGrid, Folder, FolderOpen, ArrowRight, Move, Mail, Phone, Calendar, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, LayoutGrid, Folder, FolderOpen, ArrowRight, Move, Mail, Phone, Calendar, Dumbbell, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../lib/supabase';
 import ExerciseSetsModal from '../components/ExerciseSetsModal';
 import InlineSetsEditor from '../components/InlineSetsEditor';
@@ -24,6 +27,9 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
   const [categoryViewMode, setCategoryViewMode] = useState(
     () => localStorage.getItem('categoryViewMode') || 'grid'
   );
+
+  // Sensor de drag: só dispara pelo handle (listeners ficam no GripVertical)
+  const dndSensors = useSensors(useSensor(PointerSensor));
 
   const getShortName = (name) => {
     const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -64,14 +70,26 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
       // Usar Map com chave composta: exercise_id + category_id
       // Isso permite o mesmo exercício em categorias diferentes
       const exerciseMap = new Map();
+      // Ordem efetiva do grupo: maior display_order não-nulo entre os registros
+      // (novos inserts do histórico vêm com null e não podem apagar a posição)
+      const orderByKey = new Map();
       progressData.forEach(record => {
         const key = `${record.exercise_id}_${record.category_id || 'null'}`;
         if (!exerciseMap.has(key)) {
           exerciseMap.set(key, record);
         }
+        if (record.display_order != null) {
+          const cur = orderByKey.get(key);
+          if (cur == null || record.display_order > cur) {
+            orderByKey.set(key, record.display_order);
+          }
+        }
       });
 
-      const exercises = Array.from(exerciseMap.values());
+      const exercises = Array.from(exerciseMap.entries()).map(([key, rec]) => ({
+        ...rec,
+        display_order: orderByKey.has(key) ? orderByKey.get(key) : null
+      }));
       const recordIds = exercises.map(ex => ex.id);
 
       // Buscar todas as séries de uma vez (otimizado)
@@ -212,7 +230,8 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
   const handleMoveExercise = async (exerciseRecordId, categoryId) => {
     const { error } = await supabase
       .from('progress_records')
-      .update({ category_id: categoryId })
+      // display_order null: o exercício entra no fim da categoria destino
+      .update({ category_id: categoryId, display_order: null })
       .eq('id', exerciseRecordId);
 
     if (!error) {
@@ -248,7 +267,9 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
         weight: 0,
         reps: 0,
         sets: 0,
-        notes: ''
+        notes: '',
+        // Entra no fim da lista da categoria atual
+        display_order: exercisesInCategory.length
       }])
       .select();
 
@@ -312,6 +333,44 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
     }
   };
 
+  // Reordenação por drag-and-drop: atualização otimista + persistência em
+  // todas as linhas do grupo (student+exercise+category), para a posição
+  // sobreviver a novos registros de histórico do mesmo exercício.
+  const handleReorder = async (activeId, overId) => {
+    if (!overId || activeId === overId) return;
+
+    const oldIndex = exercisesInCategory.findIndex(ex => ex.id === activeId);
+    const newIndex = exercisesInCategory.findIndex(ex => ex.id === overId);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(exercisesInCategory, oldIndex, newIndex);
+    const orderById = new Map(reordered.map((ex, i) => [ex.id, i]));
+
+    // Otimista: aplica a nova posição no state local imediatamente
+    setStudentExercises(prev =>
+      prev.map(ex => (orderById.has(ex.id) ? { ...ex, display_order: orderById.get(ex.id) } : ex))
+    );
+
+    // Persiste: um UPDATE por exercício, cobrindo todo o grupo
+    const results = await Promise.all(
+      reordered.map((ex, i) => {
+        let q = supabase
+          .from('progress_records')
+          .update({ display_order: i })
+          .eq('student_id', student.id)
+          .eq('exercise_id', ex.exercise_id);
+        q = ex.category_id ? q.eq('category_id', ex.category_id) : q.is('category_id', null);
+        return q;
+      })
+    );
+
+    const failed = results.find(r => r.error);
+    if (failed) {
+      await showAlert('Erro ao salvar a ordem: ' + failed.error.message, 'error');
+      loadStudentData();
+    }
+  };
+
   const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || 'Desconhecido';
   const getMuscleGroup = (id) => exercises.find(e => e.id === id)?.muscle_group || '';
 
@@ -329,9 +388,12 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
     exercise.muscle_group.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const exercisesInCategory = selectedCategory
+  // Ordenado pela posição salva (drag-and-drop); sem posição → fim da lista.
+  // sort é estável: empates preservam a ordem por recorded_at desc do load.
+  const exercisesInCategory = (selectedCategory
     ? studentExercises.filter(ex => ex.category_id === selectedCategory)
-    : studentExercises.filter(ex => !ex.category_id);
+    : studentExercises.filter(ex => !ex.category_id)
+  ).sort((a, b) => (a.display_order ?? Infinity) - (b.display_order ?? Infinity));
 
   const uncategorizedCount = studentExercises.filter(ex => !ex.category_id).length;
 
@@ -787,39 +849,77 @@ const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = 
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {exercisesInCategory.map(exerciseRecord => (
-                <ExerciseRow
-                  key={exerciseRecord.id}
-                  exerciseRecord={exerciseRecord}
-                  exerciseName={getExerciseName(exerciseRecord.exercise_id)}
-                  muscleGroup={getMuscleGroup(exerciseRecord.exercise_id)}
-                  isEditing={editingExercise === exerciseRecord.id}
-                  onEdit={() => setEditingExercise(exerciseRecord.id)}
-                  onCancelEdit={() => setEditingExercise(null)}
-                  onSave={(data) => handleUpdateExercise(exerciseRecord, data)}
-                  onDelete={() => handleDeleteExercise(exerciseRecord)}
-                  onShowHistory={() => setShowHistory(exerciseRecord.exercise_id)}
-                  onShowSets={() => setShowSetsModal(exerciseRecord)}
-                  onMove={() => setShowMoveModal(exerciseRecord)}
-                  categories={categories}
-                  showAlert={showAlert}
-                  showConfirm={showConfirm}
-                  isStudentView={isStudentView}
-                  isExpanded={expandedRecordId === exerciseRecord.id}
-                  onToggleExpand={() =>
-                    setExpandedRecordId(prev => prev === exerciseRecord.id ? null : exerciseRecord.id)
-                  }
-                  onSetsSaved={loadStudentData}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => handleReorder(active.id, over?.id)}
+            >
+              <SortableContext
+                items={exercisesInCategory.map(ex => ex.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {exercisesInCategory.map(exerciseRecord => (
+                    <SortableExerciseRow key={exerciseRecord.id} id={exerciseRecord.id}>
+                      {(dragHandleProps) => (
+                        <ExerciseRow
+                          exerciseRecord={exerciseRecord}
+                          exerciseName={getExerciseName(exerciseRecord.exercise_id)}
+                          muscleGroup={getMuscleGroup(exerciseRecord.exercise_id)}
+                          isEditing={editingExercise === exerciseRecord.id}
+                          onEdit={() => setEditingExercise(exerciseRecord.id)}
+                          onCancelEdit={() => setEditingExercise(null)}
+                          onSave={(data) => handleUpdateExercise(exerciseRecord, data)}
+                          onDelete={() => handleDeleteExercise(exerciseRecord)}
+                          onShowHistory={() => setShowHistory(exerciseRecord.exercise_id)}
+                          onShowSets={() => setShowSetsModal(exerciseRecord)}
+                          onMove={() => setShowMoveModal(exerciseRecord)}
+                          categories={categories}
+                          showAlert={showAlert}
+                          showConfirm={showConfirm}
+                          isStudentView={isStudentView}
+                          isExpanded={expandedRecordId === exerciseRecord.id}
+                          onToggleExpand={() =>
+                            setExpandedRecordId(prev => prev === exerciseRecord.id ? null : exerciseRecord.id)
+                          }
+                          onSetsSaved={loadStudentData}
+                          dragHandleProps={dragHandleProps}
+                        />
+                      )}
+                    </SortableExerciseRow>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </>
       )}
 
       {/* Modals personalizados */}
       {ModalComponents}
+    </div>
+  );
+};
+
+// Wrapper sortable: aplica transform/transition do dnd-kit e entrega os
+// listeners do drag (via render prop) para o handle dentro do ExerciseRow.
+const SortableExerciseRow = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.85 : 1,
+        zIndex: isDragging ? 10 : 'auto',
+        position: 'relative',
+        boxShadow: isDragging ? '0 12px 28px rgba(249,171,45,0.22)' : 'none',
+        borderRadius: '12px'
+      }}
+    >
+      {children({ ...attributes, ...listeners })}
     </div>
   );
 };
@@ -859,7 +959,8 @@ const ExerciseRow = ({
   isStudentView = false,
   isExpanded = false,
   onToggleExpand,
-  onSetsSaved
+  onSetsSaved,
+  dragHandleProps
 }) => {
   const isMobile = useIsMobile();
 
@@ -1126,13 +1227,37 @@ const ExerciseRow = ({
         gap: '1rem',
         marginBottom: '1rem'
       }}>
-        <div>
-          <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
-            {exerciseName}
-          </h3>
-          <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
-            {muscleGroup}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+          {dragHandleProps && (
+            <button
+              {...dragHandleProps}
+              onClick={(e) => e.stopPropagation()}
+              title="Arrastar para reordenar"
+              aria-label="Arrastar para reordenar"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.25rem',
+                margin: '-0.25rem 0 0 -0.5rem',
+                cursor: 'grab',
+                touchAction: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#666',
+                flexShrink: 0
+              }}
+            >
+              <GripVertical size={18} aria-hidden="true" />
+            </button>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
+              {exerciseName}
+            </h3>
+            <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
+              {muscleGroup}
+            </p>
+          </div>
         </div>
 
         <div style={{

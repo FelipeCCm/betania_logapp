@@ -1,11 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, Folder, FolderOpen, ArrowRight, Move } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Plus, Save, Trash2, X, Edit2, History, Search, List, LayoutGrid, Folder, FolderOpen, ArrowRight, Move, Mail, Phone, Calendar, Dumbbell, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../lib/supabase';
 import ExerciseSetsModal from '../components/ExerciseSetsModal';
+import InlineSetsEditor from '../components/InlineSetsEditor';
 import { useCustomModal } from '../components/CustomModal';
 
-const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
+const StudentProfile = ({ student, onBack, exercises, hideBack, isStudentView = false }) => {
   const { showAlert, showConfirm, ModalComponents } = useCustomModal();
   const [studentExercises, setStudentExercises] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -19,6 +23,26 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
   const [showSetsModal, setShowSetsModal] = useState(null);
   const [showMoveModal, setShowMoveModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedRecordId, setExpandedRecordId] = useState(null);
+  const [categoryViewMode, setCategoryViewMode] = useState(
+    () => localStorage.getItem('categoryViewMode') || 'grid'
+  );
+
+  // Sensor de drag: só dispara pelo handle (listeners ficam no GripVertical)
+  const dndSensors = useSensors(useSensor(PointerSensor));
+
+  const getShortName = (name) => {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    return parts.length <= 1 ? (name || '') : `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
+  const toggleCategoryView = () => {
+    setCategoryViewMode(prev => {
+      const next = prev === 'grid' ? 'list' : 'grid';
+      localStorage.setItem('categoryViewMode', next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadStudentData();
@@ -46,14 +70,26 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
       // Usar Map com chave composta: exercise_id + category_id
       // Isso permite o mesmo exercício em categorias diferentes
       const exerciseMap = new Map();
+      // Ordem efetiva do grupo: maior display_order não-nulo entre os registros
+      // (novos inserts do histórico vêm com null e não podem apagar a posição)
+      const orderByKey = new Map();
       progressData.forEach(record => {
         const key = `${record.exercise_id}_${record.category_id || 'null'}`;
         if (!exerciseMap.has(key)) {
           exerciseMap.set(key, record);
         }
+        if (record.display_order != null) {
+          const cur = orderByKey.get(key);
+          if (cur == null || record.display_order > cur) {
+            orderByKey.set(key, record.display_order);
+          }
+        }
       });
 
-      const exercises = Array.from(exerciseMap.values());
+      const exercises = Array.from(exerciseMap.entries()).map(([key, rec]) => ({
+        ...rec,
+        display_order: orderByKey.has(key) ? orderByKey.get(key) : null
+      }));
       const recordIds = exercises.map(ex => ex.id);
 
       // Buscar todas as séries de uma vez (otimizado)
@@ -77,12 +113,18 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
         set => (set.week_number || 1) === maxWeekByRecord[set.progress_record_id]
       );
 
-      // Contar séries e identificar última série válida por exercício
+      // Contar séries e identificar a última série da última semana por exercício
       const setsCountMap = {};
-      const lastValidSetMap = {};
+      const lastValidSetMap = {}; // última série VÁLIDA (maior set_number) da última semana
+      const lastSetMap = {};      // última série de QUALQUER tipo (fallback)
 
       lastWeekSets.forEach(set => {
         setsCountMap[set.progress_record_id] = (setsCountMap[set.progress_record_id] || 0) + 1;
+
+        const lastAny = lastSetMap[set.progress_record_id];
+        if (!lastAny || set.set_number > lastAny.set_number) {
+          lastSetMap[set.progress_record_id] = set;
+        }
 
         if (['valid_1', 'valid_2', 'valid_3'].includes(set.set_type)) {
           const current = lastValidSetMap[set.progress_record_id];
@@ -92,18 +134,18 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
         }
       });
 
-      // Atribuir contagem real e valores de exibição a cada exercício
+      // Resumo do card: sempre a ÚLTIMA série da ÚLTIMA semana cadastrada
+      // (prioriza a última válida; se não houver válidas, usa a última de qualquer
+      // tipo). display_* fica indefinido quando não há séries em exercise_sets,
+      // e aí o card cai para os campos legados de progress_records.
       exercises.forEach(exercise => {
         const detailedCount = setsCountMap[exercise.id];
         exercise.actual_sets_count = detailedCount || exercise.sets || 0;
 
-        const needsWeight = !exercise.weight || exercise.weight === 0;
-        const needsReps = !exercise.reps || exercise.reps === '0' || exercise.reps === 0;
-
-        if ((needsWeight || needsReps) && lastValidSetMap[exercise.id]) {
-          const lastValid = lastValidSetMap[exercise.id];
-          if (needsWeight && lastValid.weight) exercise.display_weight = lastValid.weight;
-          if (needsReps && lastValid.reps) exercise.display_reps = lastValid.reps;
+        const chosen = lastValidSetMap[exercise.id] || lastSetMap[exercise.id];
+        if (chosen) {
+          exercise.display_weight = chosen.weight;
+          exercise.display_reps = chosen.reps;
         }
       });
 
@@ -188,7 +230,8 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
   const handleMoveExercise = async (exerciseRecordId, categoryId) => {
     const { error } = await supabase
       .from('progress_records')
-      .update({ category_id: categoryId })
+      // display_order null: o exercício entra no fim da categoria destino
+      .update({ category_id: categoryId, display_order: null })
       .eq('id', exerciseRecordId);
 
     if (!error) {
@@ -224,7 +267,9 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
         weight: 0,
         reps: 0,
         sets: 0,
-        notes: ''
+        notes: '',
+        // Entra no fim da lista da categoria atual
+        display_order: exercisesInCategory.length
       }])
       .select();
 
@@ -288,6 +333,44 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
     }
   };
 
+  // Reordenação por drag-and-drop: atualização otimista + persistência em
+  // todas as linhas do grupo (student+exercise+category), para a posição
+  // sobreviver a novos registros de histórico do mesmo exercício.
+  const handleReorder = async (activeId, overId) => {
+    if (!overId || activeId === overId) return;
+
+    const oldIndex = exercisesInCategory.findIndex(ex => ex.id === activeId);
+    const newIndex = exercisesInCategory.findIndex(ex => ex.id === overId);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(exercisesInCategory, oldIndex, newIndex);
+    const orderById = new Map(reordered.map((ex, i) => [ex.id, i]));
+
+    // Otimista: aplica a nova posição no state local imediatamente
+    setStudentExercises(prev =>
+      prev.map(ex => (orderById.has(ex.id) ? { ...ex, display_order: orderById.get(ex.id) } : ex))
+    );
+
+    // Persiste: um UPDATE por exercício, cobrindo todo o grupo
+    const results = await Promise.all(
+      reordered.map((ex, i) => {
+        let q = supabase
+          .from('progress_records')
+          .update({ display_order: i })
+          .eq('student_id', student.id)
+          .eq('exercise_id', ex.exercise_id);
+        q = ex.category_id ? q.eq('category_id', ex.category_id) : q.is('category_id', null);
+        return q;
+      })
+    );
+
+    const failed = results.find(r => r.error);
+    if (failed) {
+      await showAlert('Erro ao salvar a ordem: ' + failed.error.message, 'error');
+      loadStudentData();
+    }
+  };
+
   const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || 'Desconhecido';
   const getMuscleGroup = (id) => exercises.find(e => e.id === id)?.muscle_group || '';
 
@@ -305,9 +388,12 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
     exercise.muscle_group.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const exercisesInCategory = selectedCategory
+  // Ordenado pela posição salva (drag-and-drop); sem posição → fim da lista.
+  // sort é estável: empates preservam a ordem por recorded_at desc do load.
+  const exercisesInCategory = (selectedCategory
     ? studentExercises.filter(ex => ex.category_id === selectedCategory)
-    : studentExercises.filter(ex => !ex.category_id);
+    : studentExercises.filter(ex => !ex.category_id)
+  ).sort((a, b) => (a.display_order ?? Infinity) - (b.display_order ?? Infinity));
 
   const uncategorizedCount = studentExercises.filter(ex => !ex.category_id).length;
 
@@ -341,27 +427,38 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
           </button>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <div style={{
-            width: '80px',
-            height: '80px',
+            width: '56px',
+            height: '56px',
             borderRadius: '50%',
             backgroundColor: '#f9ab2d',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '2.5rem',
+            fontSize: '2rem',
             fontWeight: 'bold',
-            color: '#1a1b1c'
+            color: '#1a1b1c',
+            flexShrink: 0
           }}>
             {student.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
-              {student.name}
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
+              {getShortName(student.name)}
             </h1>
-            {student.email && <p style={{ color: '#999', margin: '0.25rem 0' }}>📧 {student.email}</p>}
-            {student.phone && <p style={{ color: '#999', margin: '0.25rem 0' }}>📱 {student.phone}</p>}
+            {student.email && (
+              <p style={{ color: '#999', margin: '0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', wordBreak: 'break-word' }}>
+                <Mail size={14} color="#999" aria-hidden="true" style={{ flexShrink: 0 }} />
+                <span>{student.email}</span>
+              </p>
+            )}
+            {student.phone && (
+              <p style={{ color: '#999', margin: '0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Phone size={14} color="#999" aria-hidden="true" style={{ flexShrink: 0 }} />
+                <span>{student.phone}</span>
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -380,34 +477,61 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
             <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#f9ab2d', margin: 0 }}>
               Categorias de Exercícios
             </h2>
-            <button
-              onClick={() => setShowCategoryModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#f9ab2d',
-                color: '#1a1b1c',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '1rem'
-              }}
-            >
-              <Plus size={20} />
-              Nova Categoria
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                onClick={toggleCategoryView}
+                title={categoryViewMode === 'grid' ? 'Ver em lista' : 'Ver em cards'}
+                aria-label={categoryViewMode === 'grid' ? 'Ver em lista' : 'Ver em cards'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0.75rem',
+                  backgroundColor: 'transparent',
+                  color: '#f9ab2d',
+                  border: '1px solid #f9ab2d',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                {categoryViewMode === 'grid' ? <List size={20} /> : <LayoutGrid size={20} />}
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#f9ab2d',
+                  color: '#1a1b1c',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '1rem'
+                }}
+              >
+                <Plus size={20} />
+                Nova Categoria
+              </button>
+            </div>
           </div>
 
-          {/* Grid de Categorias */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1.5rem',
-            marginBottom: '2rem'
-          }}>
+          {/* Grid/Lista de Categorias */}
+          <div style={categoryViewMode === 'list'
+            ? {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                marginBottom: '2rem'
+              }
+            : {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1.5rem',
+                marginBottom: '2rem'
+              }}>
             {/* Exercícios sem categoria */}
             {uncategorizedCount > 0 && (
               <CategoryCard
@@ -418,6 +542,7 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
                   setIsViewingExercises(true);
                 }}
                 isUncategorized={true}
+                viewMode={categoryViewMode}
               />
             )}
 
@@ -436,6 +561,7 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
                 isEditing={editingCategory === category.id}
                 onSaveEdit={(newName) => handleUpdateCategory(category.id, newName)}
                 onCancelEdit={() => setEditingCategory(null)}
+                viewMode={categoryViewMode}
               />
             ))}
 
@@ -623,10 +749,10 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem'
+                      marginBottom: '1rem',
+                      boxShadow: '0 4px 12px rgba(249,171,45,0.25)'
                     }}>
-                      💪
+                      <Dumbbell size={24} color="#1a1b1c" aria-hidden="true" />
                     </div>
                     <h4 style={{ 
                       color: '#f9ab2d', 
@@ -723,32 +849,77 @@ const StudentProfile = ({ student, onBack, exercises, hideBack }) => {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {exercisesInCategory.map(exerciseRecord => (
-                <ExerciseRow
-                  key={exerciseRecord.id}
-                  exerciseRecord={exerciseRecord}
-                  exerciseName={getExerciseName(exerciseRecord.exercise_id)}
-                  muscleGroup={getMuscleGroup(exerciseRecord.exercise_id)}
-                  isEditing={editingExercise === exerciseRecord.id}
-                  onEdit={() => setEditingExercise(exerciseRecord.id)}
-                  onCancelEdit={() => setEditingExercise(null)}
-                  onSave={(data) => handleUpdateExercise(exerciseRecord, data)}
-                  onDelete={() => handleDeleteExercise(exerciseRecord)}
-                  onShowHistory={() => setShowHistory(exerciseRecord.exercise_id)}
-                  onShowSets={() => setShowSetsModal(exerciseRecord)}
-                  onMove={() => setShowMoveModal(exerciseRecord)}
-                  categories={categories}
-                  showAlert={showAlert}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => handleReorder(active.id, over?.id)}
+            >
+              <SortableContext
+                items={exercisesInCategory.map(ex => ex.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {exercisesInCategory.map(exerciseRecord => (
+                    <SortableExerciseRow key={exerciseRecord.id} id={exerciseRecord.id}>
+                      {(dragHandleProps) => (
+                        <ExerciseRow
+                          exerciseRecord={exerciseRecord}
+                          exerciseName={getExerciseName(exerciseRecord.exercise_id)}
+                          muscleGroup={getMuscleGroup(exerciseRecord.exercise_id)}
+                          isEditing={editingExercise === exerciseRecord.id}
+                          onEdit={() => setEditingExercise(exerciseRecord.id)}
+                          onCancelEdit={() => setEditingExercise(null)}
+                          onSave={(data) => handleUpdateExercise(exerciseRecord, data)}
+                          onDelete={() => handleDeleteExercise(exerciseRecord)}
+                          onShowHistory={() => setShowHistory(exerciseRecord.exercise_id)}
+                          onShowSets={() => setShowSetsModal(exerciseRecord)}
+                          onMove={() => setShowMoveModal(exerciseRecord)}
+                          categories={categories}
+                          showAlert={showAlert}
+                          showConfirm={showConfirm}
+                          isStudentView={isStudentView}
+                          isExpanded={expandedRecordId === exerciseRecord.id}
+                          onToggleExpand={() =>
+                            setExpandedRecordId(prev => prev === exerciseRecord.id ? null : exerciseRecord.id)
+                          }
+                          onSetsSaved={loadStudentData}
+                          dragHandleProps={dragHandleProps}
+                        />
+                      )}
+                    </SortableExerciseRow>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </>
       )}
 
       {/* Modals personalizados */}
       {ModalComponents}
+    </div>
+  );
+};
+
+// Wrapper sortable: aplica transform/transition do dnd-kit e entrega os
+// listeners do drag (via render prop) para o handle dentro do ExerciseRow.
+const SortableExerciseRow = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.85 : 1,
+        zIndex: isDragging ? 10 : 'auto',
+        position: 'relative',
+        boxShadow: isDragging ? '0 12px 28px rgba(249,171,45,0.22)' : 'none',
+        borderRadius: '12px'
+      }}
+    >
+      {children({ ...attributes, ...listeners })}
     </div>
   );
 };
@@ -783,9 +954,54 @@ const ExerciseRow = ({
   onShowSets,
   onMove,
   categories,
-  showAlert
+  showAlert,
+  showConfirm,
+  isStudentView = false,
+  isExpanded = false,
+  onToggleExpand,
+  onSetsSaved,
+  dragHandleProps
 }) => {
   const isMobile = useIsMobile();
+
+  // --- Animação suave de abrir/fechar o editor inline ---
+  const sheetRef = useRef(null);
+  const [sheetRendered, setSheetRendered] = useState(isExpanded);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMaxH, setSheetMaxH] = useState(0);
+  const [sheetOverflowVisible, setSheetOverflowVisible] = useState(false);
+
+  // Monta ao expandir; ao recolher, anima e só desmonta depois
+  useEffect(() => {
+    let timer;
+    if (isExpanded) {
+      setSheetRendered(true);
+    } else {
+      setSheetOverflowVisible(false);
+      setSheetOpen(false);
+      timer = setTimeout(() => setSheetRendered(false), 340);
+    }
+    return () => timer && clearTimeout(timer);
+  }, [isExpanded]);
+
+  // Após montar: mede a altura, dispara a animação de abertura e mantém a
+  // altura sincronizada conforme o conteúdo carrega/muda (carregar, add série...)
+  useEffect(() => {
+    if (!sheetRendered) return;
+    const el = sheetRef.current;
+    if (!el) return;
+    setSheetMaxH(el.scrollHeight);
+    const raf = requestAnimationFrame(() => setSheetOpen(true));
+    const overflowTimer = setTimeout(() => setSheetOverflowVisible(true), 340);
+    const ro = new ResizeObserver(() => setSheetMaxH(el.scrollHeight));
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(overflowTimer);
+      ro.disconnect();
+    };
+  }, [sheetRendered]);
+
   const [formData, setFormData] = useState({
   weight: exerciseRecord.weight === 0 ? '' : exerciseRecord.weight,
   reps: (!exerciseRecord.reps || exerciseRecord.reps === '0' || exerciseRecord.reps === 0) ? '' : exerciseRecord.reps,
@@ -984,22 +1200,25 @@ const ExerciseRow = ({
 
   return (
     <div
-      onClick={onShowSets}
+      onClick={isStudentView ? onToggleExpand : onShowSets}
       style={{
         backgroundColor: '#2a2b2c',
         padding: '1.5rem',
         borderRadius: '12px',
-        border: '1px solid #3a3b3c',
+        border: isStudentView && isExpanded ? '1px solid #f9ab2d' : '1px solid #3a3b3c',
         cursor: 'pointer',
-        transition: 'all 0.2s'
+        transition: 'all 0.2s',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#f9ab2d';
-        e.currentTarget.style.boxShadow = '0 6px 14px rgba(249, 171, 45, 0.15)';
+        e.currentTarget.style.boxShadow = '0 8px 20px rgba(249, 171, 45, 0.18)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = '#3a3b3c';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+        e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
       <div style={{
@@ -1008,13 +1227,37 @@ const ExerciseRow = ({
         gap: '1rem',
         marginBottom: '1rem'
       }}>
-        <div>
-          <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
-            {exerciseName}
-          </h3>
-          <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
-            {muscleGroup}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+          {dragHandleProps && (
+            <button
+              {...dragHandleProps}
+              onClick={(e) => e.stopPropagation()}
+              title="Arrastar para reordenar"
+              aria-label="Arrastar para reordenar"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.25rem',
+                margin: '-0.25rem 0 0 -0.5rem',
+                cursor: 'grab',
+                touchAction: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#666',
+                flexShrink: 0
+              }}
+            >
+              <GripVertical size={18} aria-hidden="true" />
+            </button>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: '1.25rem', color: '#f9ab2d', margin: '0 0 0.25rem 0' }}>
+              {exerciseName}
+            </h3>
+            <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
+              {muscleGroup}
+            </p>
+          </div>
         </div>
 
         <div style={{
@@ -1025,10 +1268,10 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>CARGA</div>
             <div style={{ fontWeight: 'bold', color: '#f9ab2d', fontSize: '1.25rem' }}>
-              {exerciseRecord.weight && exerciseRecord.weight !== 0
-                ? `${exerciseRecord.weight} kg`
-                : exerciseRecord.display_weight
-                  ? `${exerciseRecord.display_weight} kg`
+              {exerciseRecord.display_weight
+                ? `${exerciseRecord.display_weight} kg`
+                : exerciseRecord.weight && exerciseRecord.weight !== 0
+                  ? `${exerciseRecord.weight} kg`
                   : '-'
               }
             </div>
@@ -1037,10 +1280,10 @@ const ExerciseRow = ({
           <div>
             <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>REPS</div>
             <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-              {exerciseRecord.reps && exerciseRecord.reps !== '0' && exerciseRecord.reps !== 0
-                ? exerciseRecord.reps
-                : exerciseRecord.display_reps
-                  ? exerciseRecord.display_reps
+              {exerciseRecord.display_reps
+                ? exerciseRecord.display_reps
+                : exerciseRecord.reps && exerciseRecord.reps !== '0' && exerciseRecord.reps !== 0
+                  ? exerciseRecord.reps
                   : '-'
               }
             </div>
@@ -1174,6 +1417,31 @@ const ExerciseRow = ({
           {!isMobile && 'Excluir'}
         </button>
       </div>
+
+      {/* Editor de séries inline (apenas na visão do aluno) — abre/fecha suave */}
+      {isStudentView && sheetRendered && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxHeight: sheetOpen ? `${sheetMaxH}px` : '0px',
+            opacity: sheetOpen ? 1 : 0,
+            overflow: sheetOverflowVisible ? 'visible' : 'hidden',
+            transition: 'max-height 0.32s ease, opacity 0.26s ease',
+            cursor: 'default'
+          }}
+        >
+          <div ref={sheetRef} style={{ paddingTop: '1rem' }}>
+            <div style={{ borderTop: '1px solid #3a3b3c', paddingTop: '1rem' }}>
+              <InlineSetsEditor
+                progressRecord={exerciseRecord}
+                onSaved={onSetsSaved}
+                showAlert={showAlert}
+                showConfirm={showConfirm}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1294,8 +1562,9 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
                   <div style={{ fontWeight: 'bold' }}>{record.sets}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                    📅 {new Date(record.recorded_at).toLocaleDateString('pt-BR')} às {new Date(record.recorded_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  <div style={{ fontSize: '0.875rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Calendar size={14} color="#f9ab2d" aria-hidden="true" style={{ flexShrink: 0 }} />
+                    <span>{new Date(record.recorded_at).toLocaleDateString('pt-BR')} às {new Date(record.recorded_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   {record.notes && (
                     <div style={{ fontSize: '0.75rem', color: '#bbb', fontStyle: 'italic' }}>
@@ -1332,7 +1601,7 @@ const HistoryModal = ({ student, exerciseId, exerciseName, onClose }) => {
 };
 
 // Componente de Card de Categoria
-const CategoryCard = ({ category, count, onSelect, onEdit, onDelete, isEditing, onSaveEdit, onCancelEdit, isUncategorized }) => {
+const CategoryCard = ({ category, count, onSelect, onEdit, onDelete, isEditing, onSaveEdit, onCancelEdit, isUncategorized, viewMode = 'grid' }) => {
   const [editName, setEditName] = useState(category.name);
 
   if (isEditing) {
@@ -1401,6 +1670,116 @@ const CategoryCard = ({ category, count, onSelect, onEdit, onDelete, isEditing, 
     );
   }
 
+  if (viewMode === 'list') {
+    return (
+      <div
+        onClick={onSelect}
+        style={{
+          backgroundColor: '#2a2b2c',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          border: isUncategorized ? '1px dashed #666' : '1px solid #3a3b3c',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.22)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#f9ab2d';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = isUncategorized ? '#666' : '#3a3b3c';
+        }}
+      >
+        <div style={{
+          width: '36px',
+          height: '36px',
+          borderRadius: '8px',
+          backgroundColor: isUncategorized ? '#666' : '#f9ab2d',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {isUncategorized ? (
+            <List size={18} color="#1a1b1c" />
+          ) : (
+            <Folder size={18} color="#1a1b1c" />
+          )}
+        </div>
+
+        <h3 style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: '1rem',
+          fontWeight: 'bold',
+          color: '#f9ab2d',
+          margin: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {category.name}
+        </h3>
+
+        <span style={{
+          backgroundColor: '#1a1b1c',
+          padding: '0.25rem 0.75rem',
+          borderRadius: '12px',
+          fontWeight: 'bold',
+          color: '#f9ab2d',
+          fontSize: '0.8rem',
+          flexShrink: 0
+        }}>
+          {count} {count === 1 ? 'exercício' : 'exercícios'}
+        </span>
+
+        {!isUncategorized && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: '#1a1b1c',
+                border: '1px solid #f9ab2d',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Edit2 size={14} color="#f9ab2d" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: '#1a1b1c',
+                border: '1px solid #ff4444',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Trash2 size={14} color="#ff4444" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onSelect}
@@ -1411,17 +1790,18 @@ const CategoryCard = ({ category, count, onSelect, onEdit, onDelete, isEditing, 
         border: isUncategorized ? '2px dashed #666' : '2px solid #3a3b3c',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        position: 'relative'
+        position: 'relative',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = '#f9ab2d';
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 8px 16px rgba(249, 171, 45, 0.2)';
+        e.currentTarget.style.boxShadow = '0 12px 28px rgba(249, 171, 45, 0.22)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = isUncategorized ? '#666' : '#3a3b3c';
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
       }}
     >
       {!isUncategorized && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Trash2 } from 'lucide-react';
+import { User, Trash2, Mail, Phone, ArrowRight } from 'lucide-react';
 import { useCustomModal } from './CustomModal';
 
 const StudentList = ({ students, onDelete, onSelectStudent }) => {
@@ -25,13 +25,14 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
 
   if (students.length === 0) {
     return (
-      <div style={{ 
+      <div style={{
         gridColumn: '1 / -1',
-        textAlign: 'center', 
+        textAlign: 'center',
         padding: '3rem',
         backgroundColor: '#2a2b2c',
         borderRadius: '12px',
-        border: '2px dashed #3a3b3c'
+        border: '2px dashed #3a3b3c',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
       }}>
         <User size={48} color="#f9ab2d" style={{ margin: '0 auto 1rem' }} />
         <p style={{ color: '#999', fontSize: '1.1rem' }}>
@@ -52,17 +53,20 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
             padding: '1.5rem',
             borderRadius: '12px',
             border: '1px solid #3a3b3c',
-            transition: 'transform 0.2s, border-color 0.2s',
+            transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
             position: 'relative',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-4px)';
             e.currentTarget.style.borderColor = '#f9ab2d';
+            e.currentTarget.style.boxShadow = '0 10px 24px rgba(249,171,45,0.16)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.borderColor = '#3a3b3c';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
           }}
         >
           {/* Botão de Excluir */}
@@ -108,7 +112,8 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
               justifyContent: 'center',
               fontSize: '1.5rem',
               fontWeight: 'bold',
-              color: '#1a1b1c'
+              color: '#1a1b1c',
+              flexShrink: 0
             }}>
               {student.name.charAt(0).toUpperCase()}
             </div>
@@ -119,28 +124,34 @@ const StudentList = ({ students, onDelete, onSelectStudent }) => {
 
           {/* Informações de Contato */}
           {student.email && (
-            <p style={{ margin: '0.5rem 0', color: '#999' }}>
-              📧 {student.email}
+            <p style={{ margin: '0.5rem 0', color: '#999', display: 'flex', alignItems: 'center', gap: '0.5rem', wordBreak: 'break-word' }}>
+              <Mail size={14} color="#999" aria-hidden="true" style={{ flexShrink: 0 }} />
+              <span>{student.email}</span>
             </p>
           )}
           {student.phone && (
-            <p style={{ margin: '0.5rem 0', color: '#999' }}>
-              📱 {student.phone}
+            <p style={{ margin: '0.5rem 0', color: '#999', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Phone size={14} color="#999" aria-hidden="true" style={{ flexShrink: 0 }} />
+              <span>{student.phone}</span>
             </p>
           )}
-          
+
           {/* Indicador de Click */}
           <div style={{
             marginTop: '1rem',
             padding: '0.5rem',
             backgroundColor: '#1a1b1c',
             borderRadius: '6px',
-            textAlign: 'center',
             color: '#f9ab2d',
             fontSize: '0.875rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem'
           }}>
-            Clique para ver detalhes →
+            <span>Clique para ver detalhes</span>
+            <ArrowRight size={14} aria-hidden="true" />
           </div>
         </div>
       ))}

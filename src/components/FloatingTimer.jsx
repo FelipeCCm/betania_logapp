@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTimer } from '../contexts/TimerContext';
-import './FloatingTimer.css';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -18,6 +17,120 @@ const getDefaultPosition = () => {
   const defaultWidth = 140;
   return { x: Math.max(margin, window.innerWidth - defaultWidth - margin), y: margin };
 };
+
+// Estilos inline (padrão do projeto). As propriedades com variações de pseudo-classe
+// (:active, input:focus) ou de breakpoint (@media) ficam no bloco <style> abaixo, pois
+// estilo inline sempre vence sobre folha de estilo e anularia essas variações.
+const styles = {
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    fontWeight: 600,
+    color: '#f9ab2d',
+    letterSpacing: '0.04em',
+    position: 'relative'
+  },
+  time: { fontSize: '1rem' },
+  badge: {
+    background: 'rgba(249, 171, 45, 0.15)',
+    color: '#f9ab2d',
+    border: '1px solid rgba(249, 171, 45, 0.4)',
+    padding: '0.15rem 0.5rem',
+    borderRadius: '999px',
+    fontSize: '0.7rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em'
+  },
+  panel: {
+    marginTop: '0.75rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem'
+  },
+  inputs: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '0.75rem'
+  },
+  label: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.4rem',
+    fontSize: '0.75rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    color: '#cfcfcf'
+  },
+  input: {
+    background: '#1a1b1c',
+    color: '#ffffff',
+    padding: '0.45rem 0.6rem',
+    borderRadius: '8px',
+    fontSize: '0.9rem'
+  },
+  controls: {
+    display: 'flex',
+    gap: '0.5rem',
+    flexWrap: 'wrap'
+  },
+  buttonBase: {
+    background: '#f9ab2d',
+    color: '#1a1b1c',
+    border: 'none',
+    padding: '0.4rem 0.8rem',
+    borderRadius: '8px',
+    fontWeight: 600,
+    fontSize: '0.8rem'
+  },
+  buttonGhost: {
+    background: 'transparent',
+    color: '#ffffff',
+    border: '1px solid #3a3b3c'
+  }
+};
+
+const buttonStyle = ({ disabled = false, ghost = false } = {}) => ({
+  ...styles.buttonBase,
+  ...(ghost ? styles.buttonGhost : {}),
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.55 : 1
+});
+
+// Regras que inline não expressa (mesma técnica do <style> injetado em App.jsx).
+const scopedStyles = `
+  .floating-timer {
+    cursor: grab;
+    min-width: 120px;
+    padding: 0.75rem 0.9rem;
+    border-radius: 14px;
+  }
+  .floating-timer:active {
+    cursor: grabbing;
+  }
+  .floating-timer--expanded {
+    min-width: 220px;
+  }
+  .floating-timer input {
+    border: 1px solid #3a3b3c;
+  }
+  .floating-timer input:focus {
+    outline: 2px solid rgba(249, 171, 45, 0.65);
+    border-color: #f9ab2d;
+  }
+  @media (max-width: 640px) {
+    .floating-timer {
+      padding: 0.6rem 0.75rem;
+      border-radius: 12px;
+    }
+    .floating-timer--expanded {
+      min-width: 200px;
+    }
+    .floating-timer__controls {
+      flex-direction: column;
+    }
+  }
+`;
 
 const FloatingTimer = () => {
   const {
@@ -142,91 +255,108 @@ const FloatingTimer = () => {
   };
 
   const timeDisplay = formatTime(remainingSeconds);
+  const startDisabled = isRunning || remainingSeconds === 0;
 
   return (
-    <div
-      ref={containerRef}
-      className={`floating-timer ${expanded ? 'floating-timer--expanded' : ''}`}
-      style={{ left: position.x, top: position.y }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          setExpanded((prev) => !prev);
-        }
-      }}
-    >
-      <div className="floating-timer__header">
-        <span className="floating-timer__time">{timeDisplay}</span>
-        {isRunning && <span className="floating-timer__badge">Ativo</span>}
-      </div>
-
-      {expanded && (
-        <div className="floating-timer__panel" onPointerDown={(event) => event.stopPropagation()}>
-          <div className="floating-timer__inputs">
-            <label className="floating-timer__label">
-              Min
-              <input
-                type="number"
-                min={0}
-                max={maxMinutes}
-                value={minutesInput}
-                onChange={handleMinutesChange}
-              />
-            </label>
-            <label className="floating-timer__label">
-              Seg
-              <input
-                type="number"
-                min={0}
-                max={maxSeconds}
-                value={secondsInput}
-                onChange={handleSecondsChange}
-              />
-            </label>
-          </div>
-
-          <div className="floating-timer__controls">
-            <button
-              type="button"
-              className="floating-timer__button"
-              onClick={(event) => {
-                event.stopPropagation();
-                start();
-              }}
-              disabled={isRunning || remainingSeconds === 0}
-            >
-              Iniciar
-            </button>
-            <button
-              type="button"
-              className="floating-timer__button"
-              onClick={(event) => {
-                event.stopPropagation();
-                pause();
-              }}
-              disabled={!isRunning}
-            >
-              Pausar
-            </button>
-            <button
-              type="button"
-              className="floating-timer__button floating-timer__button--ghost"
-              onClick={(event) => {
-                event.stopPropagation();
-                reset();
-              }}
-            >
-              Resetar
-            </button>
-          </div>
+    <>
+      <style>{scopedStyles}</style>
+      <div
+        ref={containerRef}
+        className={`floating-timer ${expanded ? 'floating-timer--expanded' : ''}`}
+        style={{
+          position: 'fixed',
+          zIndex: 1000,
+          left: position.x,
+          top: position.y,
+          background: '#0f1011',
+          color: '#ffffff',
+          border: '1px solid #3a3b3c',
+          boxShadow: '0 12px 24px rgba(0, 0, 0, 0.35)',
+          touchAction: 'none',
+          userSelect: 'none'
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setExpanded((prev) => !prev);
+          }
+        }}
+      >
+        <div style={{ ...styles.header, justifyContent: expanded ? 'space-between' : 'center' }}>
+          <span style={styles.time}>{timeDisplay}</span>
+          {isRunning && expanded && <span style={styles.badge}>Ativo</span>}
         </div>
-      )}
-    </div>
+
+        {expanded && (
+          <div style={styles.panel} onPointerDown={(event) => event.stopPropagation()}>
+            <div style={styles.inputs}>
+              <label style={styles.label}>
+                Min
+                <input
+                  type="number"
+                  min={0}
+                  max={maxMinutes}
+                  value={minutesInput}
+                  onChange={handleMinutesChange}
+                  style={styles.input}
+                />
+              </label>
+              <label style={styles.label}>
+                Seg
+                <input
+                  type="number"
+                  min={0}
+                  max={maxSeconds}
+                  value={secondsInput}
+                  onChange={handleSecondsChange}
+                  style={styles.input}
+                />
+              </label>
+            </div>
+
+            <div className="floating-timer__controls" style={styles.controls}>
+              <button
+                type="button"
+                style={buttonStyle({ disabled: startDisabled })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  start();
+                }}
+                disabled={startDisabled}
+              >
+                Iniciar
+              </button>
+              <button
+                type="button"
+                style={buttonStyle({ disabled: !isRunning })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  pause();
+                }}
+                disabled={!isRunning}
+              >
+                Pausar
+              </button>
+              <button
+                type="button"
+                style={buttonStyle({ ghost: true })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  reset();
+                }}
+              >
+                Resetar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
